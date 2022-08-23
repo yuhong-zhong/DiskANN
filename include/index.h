@@ -240,6 +240,9 @@ namespace diskann {
     DISKANN_DLLEXPORT void search_with_optimized_layout(const T *query, size_t K,
                                                  size_t L, unsigned *indices);
 
+    //TODO: This variable should not be commited to the main branch. This is only for gathering experimental data.
+    std::vector<unsigned> _visited_counts;
+
     /*  Internals of the library */
    protected:
     // No copy/assign.

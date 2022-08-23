@@ -79,77 +79,97 @@ int search_memory_index(diskann::Metric& metric, const std::string& index_path,
   std::vector<std::vector<float>>    query_result_dists(Lvec.size());
   std::vector<float>                 latency_stats(query_num, 0);
   std::vector<unsigned>              cmp_stats(query_num, 0);
+  std::vector<std::vector<unsigned>> query_distribution(Lvec.size());
 
   for (uint32_t test_id = 0; test_id < Lvec.size(); test_id++) {
-    _u64 L = Lvec[test_id];
-    if (L < recall_at) {
-      diskann::cout << "Ignoring search with L:" << L
-                    << " since it's smaller than K:" << recall_at << std::endl;
-      continue;
-    }
-    query_result_ids[test_id].resize(recall_at * query_num);
-
-    auto s = std::chrono::high_resolution_clock::now();
-    omp_set_num_threads(num_threads);
-#pragma omp parallel for schedule(dynamic, 1)
-    for (int64_t i = 0; i < (int64_t) query_num; i++) {
-      auto qs = std::chrono::high_resolution_clock::now();
-      if (metric == diskann::FAST_L2) {
-        index.search_with_optimized_layout(
-            query + i * query_aligned_dim, recall_at, L,
-            query_result_ids[test_id].data() + i * recall_at);
-      } else {
-        cmp_stats[i] =
-            index
-                .search(query + i * query_aligned_dim, recall_at, L,
-                        query_result_ids[test_id].data() + i * recall_at)
-                .second;
+      _u64 L = Lvec[test_id];
+      if (L < recall_at) {
+          diskann::cout << "Ignoring search with L:" << L
+              << " since it's smaller than K:" << recall_at << std::endl;
+          continue;
       }
-      auto qe = std::chrono::high_resolution_clock::now();
-      std::chrono::duration<double> diff = qe - qs;
-      latency_stats[i] = diff.count() * 1000000;
-    }
-    auto                          e = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> diff = e - s;
+      query_result_ids[test_id].resize(recall_at * query_num);
 
-    float qps = (query_num / diff.count());
+      auto s = std::chrono::high_resolution_clock::now();
+      omp_set_num_threads(num_threads);
+#pragma omp parallel for schedule(dynamic, 1)
+      for (int64_t i = 0; i < (int64_t)query_num; i++) {
+          auto qs = std::chrono::high_resolution_clock::now();
+          if (metric == diskann::FAST_L2) {
+              index.search_with_optimized_layout(
+                  query + i * query_aligned_dim, recall_at, L,
+                  query_result_ids[test_id].data() + i * recall_at);
+          }
+          else {
+              cmp_stats[i] =
+                  index
+                  .search(query + i * query_aligned_dim, recall_at, L,
+                      query_result_ids[test_id].data() + i * recall_at)
+                  .second;
+          }
+          auto qe = std::chrono::high_resolution_clock::now();
+          std::chrono::duration<double> diff = qe - qs;
+          latency_stats[i] = diff.count() * 1000000;
+      }
+      auto                          e = std::chrono::high_resolution_clock::now();
+      std::chrono::duration<double> diff = e - s;
 
-    float recall = 0;
-    if (calc_recall_flag)
-      recall = diskann::calculate_recall(query_num, gt_ids, gt_dists, gt_dim,
-                                         query_result_ids[test_id].data(),
-                                         recall_at, recall_at);
+      float qps = (query_num / diff.count());
 
-    std::sort(latency_stats.begin(), latency_stats.end());
-    float mean_latency =
-        std::accumulate(latency_stats.begin(), latency_stats.end(), 0.0) /
-        query_num;
+      float recall = 0;
+      if (calc_recall_flag)
+          recall = diskann::calculate_recall(query_num, gt_ids, gt_dists, gt_dim,
+              query_result_ids[test_id].data(),
+              recall_at, recall_at);
 
-    float avg_cmps =
-        (float) std::accumulate(cmp_stats.begin(), cmp_stats.end(), 0) /
-        (float) query_num;
+      std::sort(latency_stats.begin(), latency_stats.end());
+      float mean_latency =
+          std::accumulate(latency_stats.begin(), latency_stats.end(), 0.0) /
+          query_num;
 
-    std::cout << std::setw(4) << L << std::setw(12) << qps << std::setw(18)
-              << avg_cmps << std::setw(20) << (float) mean_latency
-              << std::setw(15)
-              << (float) latency_stats[(_u64)(0.999 * query_num)];
-    if(calc_recall_flag) 
-      std::cout<<std::setw(12) << recall; 
-    std::cout<< std::endl;
+      float avg_cmps =
+          (float)std::accumulate(cmp_stats.begin(), cmp_stats.end(), 0) /
+          (float)query_num;
+
+      std::cout << std::setw(4) << L << std::setw(12) << qps << std::setw(18)
+          << avg_cmps << std::setw(20) << (float)mean_latency
+          << std::setw(15)
+          << (float)latency_stats[(_u64)(0.999 * query_num)];
+      if (calc_recall_flag)
+          std::cout << std::setw(12) << recall;
+      std::cout << std::endl;
+      std::vector<unsigned> v;
+      query_distribution.push_back(v);
+      query_distribution[test_id].insert(query_distribution[test_id].begin(), index._visited_counts.begin(), index._visited_counts.end());
+
+      index._visited_counts.clear();
+      index._visited_counts.resize(index.return_max_points());
   }
 
   std::cout << "Done searching. Now saving results " << std::endl;
   _u64 test_id = 0;
   for (auto L : Lvec) {
-    if (L < recall_at) {
-      diskann::cout << "Ignoring search with L:" << L
-                    << " since it's smaller than K:" << recall_at << std::endl;
-      continue;
-    }
-    std::string cur_result_path =
-        result_path_prefix + "_" + std::to_string(L) + "_idx_uint32.bin";
-    diskann::save_bin<_u32>(cur_result_path, query_result_ids[test_id].data(),
-                            query_num, recall_at);
+      if (L < recall_at) {
+          diskann::cout << "Ignoring search with L:" << L
+              << " since it's smaller than K:" << recall_at << std::endl;
+          continue;
+      }
+      std::string cur_result_path =
+          result_path_prefix + "_" + std::to_string(L) + "_idx_uint32.bin";
+      diskann::save_bin<_u32>(cur_result_path, query_result_ids[test_id].data(),
+          query_num, recall_at);
+      std::string cur_q_dist_path =
+          result_path_prefix + "_" + std::to_string(L) + "_query_dist.csv";
+      diskann::save_query_distribution(cur_q_dist_path, query_distribution[test_id], query_num, query_dim);
+      std::cout << "count: " << query_distribution[test_id].size() << ", max: " << *std::max_element(query_distribution[test_id].begin(), query_distribution[test_id].end()) << ", sum of searched vectors: " << std::accumulate(query_distribution[test_id].begin(), query_distribution[test_id].end(), 0) << std::endl;
+      unsigned cnt = 0;
+      for (auto x : query_distribution[test_id]) {
+          if (x != 0) {
+              std::cout << "x: " << x << std::endl;
+              ++cnt;
+          }
+      }
+      std::cout << "non-zero count" << cnt << std::endl;
     test_id++;
   }
   diskann::aligned_free(query);

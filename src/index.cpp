@@ -679,6 +679,9 @@ namespace diskann {
                                (uint32_t) _max_range_of_loaded_graph, _dim);
     }
 
+    // INSTRUMENTED
+    _visited_counts.resize(_max_points);
+    // END INSTRUMENTED
     _change_lock.unlock();
   }
 
@@ -954,6 +957,9 @@ namespace diskann {
                     _distance->compare(_data + _aligned_dim * (size_t) id,
                                        node_coords, (unsigned) _aligned_dim),
                     true);
+      //INSTRUMENTED here
+      _visited_counts[id]++;
+      // End INSTRUMENTED
       if (fast_iterate) {
         if (inserted_into_pool_bs[id] == 0) {
           inserted_into_pool_bs[id] = 1;
@@ -1010,7 +1016,7 @@ namespace diskann {
               diskann::cerr << "Wrong id found: " << _final_graph[n][m]
                             << std::endl;
               throw diskann::ANNException(
-                  std::string("Wrong id found") +
+                  std::string("Wrong id found: ") +
                       std::to_string(_final_graph[n][m]),
                   -1, __FUNCSIG__, __FILE__, __LINE__);
             }
@@ -1802,6 +1808,7 @@ namespace diskann {
                     << (float) total / (float) (_nd + _num_frozen_pts)
                     << "  min:" << min << "  count(deg<2):" << cnt << std::endl;
     }
+    _visited_counts.resize(_max_points);
     _width = (std::max)((unsigned) max, _width);
     _has_built = true;
   }
@@ -1932,7 +1939,6 @@ namespace diskann {
 
     return search_impl(query, K, L, indices, distances, scratch);
   }
-
   template<typename T, typename TagT>
   template<typename IdType>
   std::pair<uint32_t, uint32_t> Index<T, TagT>::search_impl(
@@ -1965,7 +1971,17 @@ namespace diskann {
         aligned_query, L, init_ids, expanded_nodes_info, expanded_nodes_ids,
         best_L_nodes, des, inserted_into_pool_rs, inserted_into_pool_bs, true,
         true);
+    //INSTRUMENTATION
+    //auto current = inserted_into_pool_rs.begin();
+//    std::cout << "max pts  " << _max_points << " num pts " << _nd << ", frozen pts: " << _num_frozen_pts << " retval (" 
+//        << retval.first << ", " << retval.second << ") best L size: " 
+//        << best_L_nodes.size() << ", des.size: "<< des.size() << ", init_ids: "
+//        << init_ids.size() << ", expanded_info: " << expanded_nodes_info.size() 
+//        << ", expanded_ids: "<< expanded_nodes_ids.size() << ", insert_rs: " 
+//        << inserted_into_pool_rs.size() << ", insert_bs: " << inserted_into_pool_bs.size() <<std::endl;
 
+  
+    // END INSTRUMENTATION
     size_t pos = 0;
     for (auto it : best_L_nodes) {
       if (it.id < _max_points) {
