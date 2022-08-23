@@ -165,11 +165,11 @@ int search_memory_index(diskann::Metric& metric, const std::string& index_path,
       unsigned cnt = 0;
       for (auto x : query_distribution[test_id]) {
           if (x != 0) {
-              std::cout << "x: " << x << std::endl;
+//              std::cout << "x: " << x << std::endl;
               ++cnt;
           }
       }
-      std::cout << "non-zero count" << cnt << std::endl;
+      std::cout << "non-zero count:" << cnt << std::endl;
     test_id++;
   }
   diskann::aligned_free(query);

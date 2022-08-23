@@ -957,9 +957,6 @@ namespace diskann {
                     _distance->compare(_data + _aligned_dim * (size_t) id,
                                        node_coords, (unsigned) _aligned_dim),
                     true);
-      //INSTRUMENTED here
-      _visited_counts[id]++;
-      // End INSTRUMENTED
       if (fast_iterate) {
         if (inserted_into_pool_bs[id] == 0) {
           inserted_into_pool_bs[id] = 1;
@@ -984,6 +981,9 @@ namespace diskann {
     while (k < l) {
       unsigned nk = l;
 
+      //INSTRUMENTED here
+      _visited_counts[best_L_nodes[k].id]++;
+      // End INSTRUMENTED
       if (best_L_nodes[k].flag) {
         best_L_nodes[k].flag = false;
         auto n = best_L_nodes[k].id;
