@@ -193,7 +193,7 @@ int search_memory_index(diskann::Metric& metric, const std::string& index_path,
     query_distribution[test_id].insert(query_distribution[test_id].begin(), index._visited_counts.begin(), index._visited_counts.end());
 
     index._visited_counts.clear();
-    index._visited_counts.resize(index.return_max_points());
+    index._visited_counts.resize(index.get_max_points());
   }
 
   std::cout << "Done searching. Now saving results " << std::endl;

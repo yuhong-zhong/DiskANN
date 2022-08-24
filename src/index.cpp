@@ -668,7 +668,6 @@ namespace diskann {
     // INSTRUMENTED
     _visited_counts.resize(_max_points);
     // END INSTRUMENTED
-    _change_lock.unlock();
   }
 
 #ifdef EXEC_ENV_OLS
