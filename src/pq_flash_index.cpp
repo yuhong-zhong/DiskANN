@@ -855,7 +855,7 @@ namespace diskann {
       query_norm += query1[i] * query1[i];
     }
 
-    // if inner product, we laso normalize the query and set the last coordinate
+    // if inner product, we also normalize the query and set the last coordinate
     // to 0 (this is the extra coordindate used to convert MIPS to L2 search)
     if (metric == diskann::Metric::INNER_PRODUCT) {
       query_norm = std::sqrt(query_norm);
