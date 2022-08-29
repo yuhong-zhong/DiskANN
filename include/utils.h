@@ -17,6 +17,7 @@
 #include <memory>
 #include <random>
 #include <set>
+#include <map>
 #include <sstream>
 #include <string.h>
 #ifdef __APPLE__
@@ -596,13 +597,13 @@ namespace diskann {
     std::ofstream writer;
     open_file_to_write(writer, filename);
 
-    diskann::cout << "Writing bin: " << filename.c_str() << std::endl;
+    std::cout << "Writing bin: " << filename.c_str() << std::endl;
     writer.seekp(offset, writer.beg);
     int    npts_i32 = (int) npts, ndims_i32 = (int) ndims;
     size_t bytes_written = npts * ndims * sizeof(T) + 2 * sizeof(uint32_t);
     writer.write((char*) &npts_i32, sizeof(int));
     writer.write((char*) &ndims_i32, sizeof(int));
-    diskann::cout << "bin: #pts = " << npts << ", #dims = " << ndims
+    std::cout << "bin: #pts = " << npts << ", #dims = " << ndims
                   << ", size = " << bytes_written << "B" << std::endl;
 
     writer.write((char*) data, npts * ndims * sizeof(T));
@@ -616,9 +617,33 @@ namespace diskann {
       size_t ndims) {
       std::ofstream writer(filename, std::ios::out);
       std::cout << "Writing distribution: " << filename.c_str() << std::endl;
-      writer << npts << std::endl;
+      //writer << npts << std::endl;
       for (auto entry : data) {
           writer << entry << std::endl;
+      }
+      //int npts_i32 = (int)npts, ndims_i32 = (int)ndims;
+      //writer.write((char*)&npts_i32, sizeof(int));
+      //writer.write((char*)&ndims_i32, sizeof(int));
+      //diskann::cout << "bin: #pts = " << npts << ", #dims = " << ndims
+      //    << ", size = " << npts * ndims * sizeof(T) + 2 * sizeof(int)
+      //    << "B" << std::endl;
+
+      //    data = new T[npts_u64 * ndims_u64];
+      //writer.write((char*)data, npts * ndims * sizeof(T));
+      writer.close();
+      size_t bytes_written = npts;
+      std::cout << "Finished writing dist." << std::endl;
+      return bytes_written;
+  }
+
+  inline uint64_t save_query_distribution_disk(const std::string& filename,
+      const std::map<uint64_t, uint32_t>& data, size_t npts,
+      size_t ndims) {
+      std::ofstream writer(filename, std::ios::out);
+      std::cout << "Writing distribution: " << filename.c_str() << std::endl;
+      writer << npts << std::endl;
+      for (auto entry : data) {
+          writer << entry.second << std::endl;
       }
       //int npts_i32 = (int)npts, ndims_i32 = (int)ndims;
       //writer.write((char*)&npts_i32, sizeof(int));

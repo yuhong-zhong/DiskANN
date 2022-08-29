@@ -7,6 +7,7 @@
 #include <omp.h>
 #include <pq_flash_index.h>
 #include <set>
+#include <map>
 #include <string.h>
 #include <time.h>
 #include <boost/program_options.hpp>
@@ -182,6 +183,7 @@ int search_disk_index(
 
   std::vector<std::vector<uint32_t>> query_result_ids(Lvec.size());
   std::vector<std::vector<float>>    query_result_dists(Lvec.size());
+  std::vector<std::map<uint64_t, uint32_t>> query_distribution(Lvec.size());
 
   uint32_t optimized_beamwidth = 2;
 
@@ -211,11 +213,12 @@ int search_disk_index(
     auto                  s = std::chrono::high_resolution_clock::now();
 
 #pragma omp parallel for schedule(dynamic, 1)
-    for (_s64 i = 0; i < (int64_t) query_num; i++) {
-      _pFlashIndex->cached_beam_search(
-          query + (i * query_aligned_dim), recall_at, L,
-          query_result_ids_64.data() + (i * recall_at),
-          query_result_dists[test_id].data() + (i * recall_at),
+    for (_s64 i = 0; i < (int64_t)query_num; i++) {
+        _pFlashIndex->cached_beam_search(
+            query + (i * query_aligned_dim), recall_at, L,
+            query_result_ids_64.data() + (i * recall_at),
+            query_result_dists[test_id].data() + (i * recall_at),
+            query_distribution[test_id],
           optimized_beamwidth, search_io_limit, use_reorder_data, stats + i);
     }
     auto                          e = std::chrono::high_resolution_clock::now();
@@ -276,6 +279,10 @@ int search_disk_index(
     diskann::save_bin<float>(cur_result_path,
                              query_result_dists[test_id++].data(), query_num,
                              recall_at);
+    cur_result_path =
+        result_output_prefix + "_" + std::to_string(L) + "_query_disttribution.csv";
+    diskann::save_query_distribution_disk(cur_result_path,
+        query_distribution[test_id], query_num, recall_at);
   }
 
   diskann::aligned_free(query);

@@ -6,6 +6,7 @@
 #include <sstream>
 #include <stack>
 #include <string>
+#include <map>
 #include "tsl/robin_map.h"
 #include "tsl/robin_set.h"
 
@@ -98,9 +99,12 @@ namespace diskann {
         float *res_dists, const _u64 beam_width,
         const bool use_reorder_data = false, QueryStats *stats = nullptr);
 
+    //TODO: don't commit this to main. I am messing with the function signature
+    //to get the query distribution stats out of this method.
     DISKANN_DLLEXPORT void cached_beam_search(
         const T *query, const _u64 k_search, const _u64 l_search, _u64 *res_ids,
-        float *res_dists, const _u64 beam_width, const _u32 io_limit,
+        float *res_dists, std::map<uint64_t, uint32_t>& res_query_distributions, 
+        const _u64 beam_width, const _u32 io_limit,
         const bool use_reorder_data = false, QueryStats *stats = nullptr);
 
     DISKANN_DLLEXPORT _u32 range_search(const T *query1, const double range,

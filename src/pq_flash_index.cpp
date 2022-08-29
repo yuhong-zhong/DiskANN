@@ -823,7 +823,8 @@ namespace diskann {
                                            const _u64  beam_width,
                                            const bool  use_reorder_data,
                                            QueryStats *stats) {
-    cached_beam_search(query1, k_search, l_search, indices, distances,
+      std::map<uint64_t, uint32_t> tmp;
+    cached_beam_search(query1, k_search, l_search, indices, distances, tmp,
                        beam_width, std::numeric_limits<_u32>::max(),
                        use_reorder_data, stats);
   }
@@ -831,7 +832,8 @@ namespace diskann {
   template<typename T>
   void PQFlashIndex<T>::cached_beam_search(
       const T *query1, const _u64 k_search, const _u64 l_search, _u64 *indices,
-      float *distances, const _u64 beam_width, const _u32 io_limit,
+      float *distances, std::map<uint64_t, uint32_t>& res_query_distributions,
+      const _u64 beam_width, const _u32 io_limit,
       const bool use_reorder_data, QueryStats *stats) {
     ThreadData<T> data = this->thread_data.pop();
     while (data.scratch.sector_scratch == nullptr) {
@@ -1026,6 +1028,8 @@ namespace diskann {
             cur_expanded_dist = disk_pq_table.l2_distance(
                 query_float, (_u8 *) node_fp_coords_copy);
         }
+        //TODO: instrumentation ONLY
+        res_query_distributions[cached_nhood.first] += 1;
         full_retset.push_back(
             Neighbor((unsigned) cached_nhood.first, cur_expanded_dist, true));
 
@@ -1104,6 +1108,8 @@ namespace diskann {
             cur_expanded_dist = disk_pq_table.l2_distance(
                 query_float, (_u8 *) node_fp_coords_copy);
         }
+        //TODO: INStrumentation Only
+        res_query_distributions[frontier_nhood.first] += 1;
         full_retset.push_back(
             Neighbor(frontier_nhood.first, cur_expanded_dist, true));
         unsigned *node_nbrs = (node_buf + 1);
