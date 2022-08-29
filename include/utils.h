@@ -641,12 +641,13 @@ namespace diskann {
       size_t ndims) {
       std::map<uint32_t, uint32_t> totals;
       uint32_t total = 0;
+      std::cout << "Writing distribution: " << filename.c_str() << std::endl;
+
       for (auto entry : data) {
           totals[entry.second] += 1;
           ++total;
       }
       std::ofstream writer(filename, std::ios::out);
-      std::cout << "Writing distribution: " << filename.c_str() << std::endl;
       writer << total << std::endl;
       for (auto entry : totals) {
           writer <<entry.first << "," << entry.second << std::endl;
