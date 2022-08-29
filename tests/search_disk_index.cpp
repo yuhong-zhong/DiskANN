@@ -280,7 +280,7 @@ int search_disk_index(
                              query_result_dists[test_id++].data(), query_num,
                              recall_at);
     cur_result_path =
-        result_output_prefix + "_" + std::to_string(L) + "_query_disttribution.csv";
+        result_output_prefix + "_" + std::to_string(L) + "_query_distribution.csv";
     diskann::save_query_distribution_disk(cur_result_path,
         query_distribution[test_id], query_num, recall_at);
   }
