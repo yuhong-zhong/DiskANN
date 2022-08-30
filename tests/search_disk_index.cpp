@@ -183,7 +183,7 @@ int search_disk_index(
 
   std::vector<std::vector<uint32_t>> query_result_ids(Lvec.size());
   std::vector<std::vector<float>>    query_result_dists(Lvec.size());
-  std::vector<std::map<uint64_t, uint32_t>> query_distribution(Lvec.size());
+  std::vector<std::vector<uint32_t>> query_distribution(Lvec.size());
 
   uint32_t optimized_beamwidth = 2;
 
@@ -218,7 +218,6 @@ int search_disk_index(
             query + (i * query_aligned_dim), recall_at, L,
             query_result_ids_64.data() + (i * recall_at),
             query_result_dists[test_id].data() + (i * recall_at),
-            query_distribution[test_id],
           optimized_beamwidth, search_io_limit, use_reorder_data, stats + i);
     }
     auto                          e = std::chrono::high_resolution_clock::now();
@@ -261,6 +260,11 @@ int search_disk_index(
     } else
       diskann::cout << std::endl;
     delete[] stats;
+    std::vector<unsigned> v;
+    query_distribution.push_back(v);
+    query_distribution[test_id].insert(query_distribution[test_id].begin(), _pFlashIndex->query_distributions.begin(), _pFlashIndex->query_distributions.end());
+
+    _pFlashIndex->reset_query_distribution();
   }
 
   diskann::cout << "Done searching. Now saving results " << std::endl;

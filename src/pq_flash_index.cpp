@@ -198,6 +198,12 @@ namespace diskann {
   }
 
   template<typename T>
+  void PQFlashIndex<T>::reset_query_distribution() {
+      this->query_distribution.clear();
+      this->query_distribution.resize(this->num_points);
+  }
+
+  template<typename T>
   void PQFlashIndex<T>::load_cache_list(std::vector<uint32_t> &node_list) {
     diskann::cout << "Loading the cache list into memory.." << std::flush;
     _u64 num_cached_nodes = node_list.size();
@@ -665,7 +671,8 @@ namespace diskann {
                     << disk_nnodes << " vs " << num_points << std::endl;
       return -1;
     }
-
+    this->query_distribution.resize(num_points);
+    std::cout << "resizing qd to: " << num_points << std::endl;
     size_t medoid_id_on_file;
     READ_U64(index_metadata, medoid_id_on_file);
     READ_U64(index_metadata, max_node_len);
@@ -823,8 +830,7 @@ namespace diskann {
                                            const _u64  beam_width,
                                            const bool  use_reorder_data,
                                            QueryStats *stats) {
-      std::map<uint64_t, uint32_t> tmp;
-    cached_beam_search(query1, k_search, l_search, indices, distances, tmp,
+    cached_beam_search(query1, k_search, l_search, indices, distances,
                        beam_width, std::numeric_limits<_u32>::max(),
                        use_reorder_data, stats);
   }
@@ -832,8 +838,7 @@ namespace diskann {
   template<typename T>
   void PQFlashIndex<T>::cached_beam_search(
       const T *query1, const _u64 k_search, const _u64 l_search, _u64 *indices,
-      float *distances, std::map<uint64_t, uint32_t>& res_query_distributions,
-      const _u64 beam_width, const _u32 io_limit,
+      float *distances, const _u64 beam_width, const _u32 io_limit,
       const bool use_reorder_data, QueryStats *stats) {
     ThreadData<T> data = this->thread_data.pop();
     while (data.scratch.sector_scratch == nullptr) {
@@ -1029,7 +1034,7 @@ namespace diskann {
                 query_float, (_u8 *) node_fp_coords_copy);
         }
         //TODO: instrumentation ONLY
-        res_query_distributions[cached_nhood.first] += 1;
+        this->query_distribution[cached_nhood.first] += 1;
         full_retset.push_back(
             Neighbor((unsigned) cached_nhood.first, cur_expanded_dist, true));
 
@@ -1109,7 +1114,7 @@ namespace diskann {
                 query_float, (_u8 *) node_fp_coords_copy);
         }
         //TODO: INStrumentation Only
-        res_query_distributions[frontier_nhood.first] += 1;
+        this->query_distribution[frontier_nhood.first] += 1;
         full_retset.push_back(
             Neighbor(frontier_nhood.first, cur_expanded_dist, true));
         unsigned *node_nbrs = (node_buf + 1);

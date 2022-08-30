@@ -637,16 +637,17 @@ namespace diskann {
   }
 
   inline uint64_t save_query_distribution_disk(const std::string& filename,
-      const std::map<uint64_t, uint32_t>& data, size_t npts,
+      const std::vector<uint32_t>& data, size_t npts,
       size_t ndims) {
       std::map<uint32_t, uint32_t> totals;
       uint32_t total = 0;
-      std::cout << "Writing distribution: " << filename.c_str() << std::endl;
+      std::cout << "converting distribution numNodes: " << data.size() << std::endl;
 
-      for (auto entry : data) {
-          totals[entry.second] += 1;
+      for (auto v : data) {
+          totals[v] += 1;
           ++total;
       }
+      std::cout << "Writing distribution: " << filename.c_str() << std::endl;
       std::ofstream writer(filename, std::ios::out);
       writer << total << std::endl;
       for (auto entry : totals) {
