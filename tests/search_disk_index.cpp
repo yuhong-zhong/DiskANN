@@ -262,7 +262,7 @@ int search_disk_index(
     delete[] stats;
     std::vector<unsigned> v;
     query_distribution.push_back(v);
-    query_distribution[test_id].insert(query_distribution[test_id].begin(), _pFlashIndex->query_distributions.begin(), _pFlashIndex->query_distributions.end());
+    query_distribution[test_id].insert(query_distribution[test_id].begin(), _pFlashIndex->query_distribution.begin(), _pFlashIndex->query_distribution.end());
 
     _pFlashIndex->reset_query_distribution();
   }
