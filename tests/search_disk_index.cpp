@@ -262,9 +262,11 @@ int search_disk_index(
     delete[] stats;
     std::vector<unsigned> v;
     query_distribution.push_back(v);
-    query_distribution[test_id].insert(query_distribution[test_id].begin(), _pFlashIndex->query_distribution.begin(), _pFlashIndex->query_distribution.end());
-
+    std::cout << "inserting: " << _pFlashIndex->query_distribution.size() << " elements" << std::endl;
+    //query_distribution[test_id].insert(query_distribution[test_id].begin(), _pFlashIndex->query_distribution.begin(), _pFlashIndex->query_distribution.end());
+    std::copy(_pFlashIndex->query_distribution.begin(), _pFlashIndex->query_distribution.end(), std::back_inserter(query_distribution[test_id]));
     _pFlashIndex->reset_query_distribution();
+    std::cout << "inserted: " << query_distribution[test_id].size() << " elements" << std::endl;
   }
 
   diskann::cout << "Done searching. Now saving results " << std::endl;
@@ -281,12 +283,12 @@ int search_disk_index(
     cur_result_path =
         result_output_prefix + "_" + std::to_string(L) + "_dists_float.bin";
     diskann::save_bin<float>(cur_result_path,
-                             query_result_dists[test_id++].data(), query_num,
+                             query_result_dists[test_id].data(), query_num,
                              recall_at);
     cur_result_path =
         result_output_prefix + "_" + std::to_string(L) + "_query_distribution.csv";
     diskann::save_query_distribution_disk(cur_result_path,
-        query_distribution[test_id], query_num, recall_at);
+        query_distribution[test_id++], query_num, recall_at);
   }
 
   diskann::aligned_free(query);
