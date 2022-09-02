@@ -902,7 +902,7 @@ namespace diskann {
                                                             const _u64 n_ids,
                                                             float *dists_out) {
             //TODO: updating counts for distacne comparisons
-            for (unsigned int id_to_check; id_to_check < n_ids; ++id_to_check) {
+            for (unsigned int id_to_check = 0; id_to_check < n_ids; ++id_to_check) {
                 this->query_distribution[ids[id_to_check]] += 1;
             }
       ::aggregate_coords(ids, n_ids, this->data, this->n_chunks,
