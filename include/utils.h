@@ -639,29 +639,23 @@ namespace diskann {
   inline uint64_t save_query_distribution_disk(const std::string& filename,
       const std::vector<uint32_t>& data, size_t npts,
       size_t ndims) {
-      std::map<uint32_t, uint32_t> totals;
-      uint32_t total = 0;
+      std::map<uint32_t, size_t> totals;
+      uint32_t total_items = 0, total_access=0;
       std::cout << "converting distribution numNodes: " << data.size() << std::endl;
 
       for (auto v : data) {
           totals[v] += 1;
-          ++total;
+          ++total_items;
+      }
+      for (auto entry : totals) {
+          total_access = entry.first * entry.second;
       }
       std::cout << "Writing distribution: " << filename.c_str() << std::endl;
       std::ofstream writer(filename, std::ios::out);
-      writer << total << std::endl;
+      writer << "access_count,num_elements,percentage, total_items: " << total_items << " total_access: " << total_access << std::endl;
       for (auto entry : totals) {
-          writer <<entry.first << "," << entry.second << std::endl;
+          writer <<entry.first << "," << entry.second << "," << static_cast<float>(entry.first * entry.second) / total_access << std::endl;
       }
-      //int npts_i32 = (int)npts, ndims_i32 = (int)ndims;
-      //writer.write((char*)&npts_i32, sizeof(int));
-      //writer.write((char*)&ndims_i32, sizeof(int));
-      //diskann::cout << "bin: #pts = " << npts << ", #dims = " << ndims
-      //    << ", size = " << npts * ndims * sizeof(T) + 2 * sizeof(int)
-      //    << "B" << std::endl;
-
-      //    data = new T[npts_u64 * ndims_u64];
-      //writer.write((char*)data, npts * ndims * sizeof(T));
       writer.close();
       size_t bytes_written = npts;
       std::cout << "Finished writing dist." << std::endl;
