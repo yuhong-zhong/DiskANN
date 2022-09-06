@@ -648,7 +648,7 @@ namespace diskann {
           ++total_items;
       }
       for (auto entry : totals) {
-          total_access = entry.first * entry.second;
+          total_access += entry.first * entry.second;
       }
       std::cout << "Writing distribution: " << filename.c_str() << std::endl;
       std::ofstream writer(filename, std::ios::out);
