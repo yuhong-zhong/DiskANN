@@ -640,7 +640,7 @@ namespace diskann {
       const std::vector<uint32_t>& data, size_t npts,
       size_t ndims) {
       std::map<uint32_t, size_t> totals;
-      uint32_t total_items = 0, total_access=0;
+      uint64_t total_items = 0, total_access=0;
       std::cout << "converting distribution numNodes: " << data.size() << std::endl;
 
       for (auto v : data) {
