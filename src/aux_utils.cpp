@@ -10,7 +10,8 @@
 #include <string>
 #include <vector>
 
-#if defined(RELEASE_UNUSED_TCMALLOC_MEMORY_AT_CHECKPOINTS) && defined(DISKANN_BUILD)
+#if defined(RELEASE_UNUSED_TCMALLOC_MEMORY_AT_CHECKPOINTS) && \
+    defined(DISKANN_BUILD)
 #include "gperftools/malloc_extension.h"
 #endif
 
@@ -70,8 +71,8 @@ namespace diskann {
       reader.read(dump, cur_block_size);
       writer.write(dump, cur_block_size);
     }
-//    reader.close();
-//    writer.close();
+    //    reader.close();
+    //    writer.close();
 
     delete[] dump;
     std::vector<_u64> new_meta;
@@ -667,8 +668,8 @@ namespace diskann {
         pFlashIndex->cached_beam_search(
             tuning_sample + (i * tuning_sample_aligned_dim), 1, L,
             tuning_sample_result_ids_64.data() + (i * 1),
-            tuning_sample_result_dists.data() + (i * 1), cur_bw, 
-            false, stats + i);
+            tuning_sample_result_dists.data() + (i * 1), cur_bw, false,
+            stats + i);
       }
       auto e = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double> diff = e - s;
@@ -802,29 +803,29 @@ namespace diskann {
     _u64 n_data_nodes_per_sector = 0;
 
     if (append_reorder_data) {
-      n_data_nodes_per_sector = 
-        SECTOR_LEN / (ndims_reorder_file * sizeof(float));
+      n_data_nodes_per_sector =
+          SECTOR_LEN / (ndims_reorder_file * sizeof(float));
       n_reorder_sectors =
           ROUND_UP(npts_64, n_data_nodes_per_sector) / n_data_nodes_per_sector;
     }
     _u64 disk_index_file_size =
         (n_sectors + n_reorder_sectors + 1) * SECTOR_LEN;
 
-    // write first sector with metadata
-    *(_u64 *) (sector_buf.get() + 0 * sizeof(_u64)) = disk_index_file_size;
-    *(_u64 *) (sector_buf.get() + 1 * sizeof(_u64)) = npts_64;
-    *(_u64 *) (sector_buf.get() + 2 * sizeof(_u64)) = medoid;
-    *(_u64 *) (sector_buf.get() + 3 * sizeof(_u64)) = max_node_len;
-    *(_u64 *) (sector_buf.get() + 4 * sizeof(_u64)) = nnodes_per_sector;
-    *(_u64 *) (sector_buf.get() + 5 * sizeof(_u64)) = vamana_frozen_num;
-    *(_u64 *) (sector_buf.get() + 6 * sizeof(_u64)) = vamana_frozen_loc;
-    *(_u64 *) (sector_buf.get() + 7 * sizeof(_u64)) = append_reorder_data;
+    std::vector<_u64> output_file_meta;
+    output_file_meta.push_back(npts_64);
+    output_file_meta.push_back(ndims_64);
+    output_file_meta.push_back(medoid);
+    output_file_meta.push_back(max_node_len);
+    output_file_meta.push_back(nnodes_per_sector);
+    output_file_meta.push_back(vamana_frozen_num);
+    output_file_meta.push_back(vamana_frozen_loc);
+    output_file_meta.push_back((_u64) append_reorder_data);
     if (append_reorder_data) {
-      *(_u64 *) (sector_buf.get() + 8 * sizeof(_u64)) = n_sectors + 1;
-      *(_u64 *) (sector_buf.get() + 9 * sizeof(_u64)) = ndims_reorder_file;
-      *(_u64 *) (sector_buf.get() + 10 * sizeof(_u64)) =
-          n_data_nodes_per_sector;
+      output_file_meta.push_back(n_sectors + 1);
+      output_file_meta.push_back(ndims_reorder_file);
+      output_file_meta.push_back(n_data_nodes_per_sector);
     }
+    output_file_meta.push_back(disk_index_file_size);
 
     diskann_writer.write(sector_buf.get(), SECTOR_LEN);
 
@@ -908,13 +909,17 @@ namespace diskann {
         diskann_writer.write(sector_buf.get(), SECTOR_LEN);
       }
     }
-    diskann::cout << "Output file written." << std::endl;
+    diskann_writer.close();
+    diskann::save_bin<_u64>(output_file, output_file_meta.data(),
+                            output_file_meta.size(), 1, 0);
+    diskann::cout << "Output disk index file written to " << output_file
+                  << std::endl;
   }
 
   template<typename T>
   int build_disk_index(const char *dataFilePath, const char *indexFilePath,
-                        const char *    indexBuildParameters,
-                        diskann::Metric compareMetric) {
+                       const char *    indexBuildParameters,
+                       diskann::Metric compareMetric) {
     std::stringstream parser;
     parser << std::string(indexBuildParameters);
     std::string              cur_param;
@@ -1095,7 +1100,8 @@ namespace diskann {
     train_data = nullptr;
 // Gopal. Splitting diskann_dll into separate DLLs for search and build.
 // This code should only be available in the "build" DLL.
-#if defined(RELEASE_UNUSED_TCMALLOC_MEMORY_AT_CHECKPOINTS) && defined(DISKANN_BUILD)
+#if defined(RELEASE_UNUSED_TCMALLOC_MEMORY_AT_CHECKPOINTS) && \
+    defined(DISKANN_BUILD)
     MallocExtension::instance()->ReleaseFreeMemory();
 #endif
 

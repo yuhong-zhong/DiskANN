@@ -42,7 +42,7 @@ if (MSVC)
 
     message(STATUS "Invoking nuget to download Boost, OpenMP and MKL dependencies...")
     configure_file(${PROJECT_SOURCE_DIR}/windows/packages.config.in ${DISKANN_MSVC_PACKAGES_CONFIG})
-    exec_program(${NUGET_EXE} ARGS install ${DISKANN_MSVC_PACKAGES_CONFIG} -ExcludeVersion -OutputDirectory ${DISKANN_MSVC_PACKAGES})
+    exec_program(${NUGET_EXE} ARGS install \"${DISKANN_MSVC_PACKAGES_CONFIG}\" -ExcludeVersion -OutputDirectory \"${DISKANN_MSVC_PACKAGES}\")
     message(STATUS "Finished setting up nuget dependencies")
 endif()
 
@@ -236,3 +236,9 @@ endif()
 add_subdirectory(src)
 add_subdirectory(tests)
 add_subdirectory(tests/utils)
+
+if (MSVC)
+    message(STATUS "The ${PROJECT_NAME}.sln has been created, opened it from VisualStudio to build Release or Debug configurations.\n"
+                   "Alternatively, use MSBuild to build:\n\n"
+                   "msbuild.exe ${PROJECT_NAME}.sln /m /nologo /t:Build /p:Configuration=\"Release\" /property:Platform=\"x64\"\n")
+endif()
