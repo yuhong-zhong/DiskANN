@@ -691,7 +691,7 @@ namespace diskann {
               << static_cast<float>(cummulative_elements) / total_items<< ","
               << cummulative_access_from_bottom[cummulative_access_from_bottom.size() - index - 1] << ","
               << static_cast<float>(cummulative_access_from_bottom[cummulative_access_from_bottom.size() - index-1]) / total_access << ","
-              << cummulative_elements_from_bottom[cummulative_elements_from_bottom.size() - index -1]
+              << cummulative_elements_from_bottom[cummulative_elements_from_bottom.size() - index -1] << ","
               << static_cast<float>(cummulative_elements_from_bottom[cummulative_elements_from_bottom.size() - index - 1]) / total_items << ","
               << std::endl;
           ++index;
