@@ -901,7 +901,7 @@ namespace diskann {
     auto compute_dists = [this, pq_coord_scratch, pq_dists](const unsigned *ids,
                                                             const _u64 n_ids,
                                                             float *dists_out) {
-            //TODO: updating counts for distacne comparisons
+            //TODO: updating counts for distance comparisons
             for (unsigned int id_to_check = 0; id_to_check < n_ids; ++id_to_check) {
                 this->query_distribution[ids[id_to_check]] += 1;
             }
