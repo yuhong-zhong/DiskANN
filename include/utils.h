@@ -654,16 +654,27 @@ namespace diskann {
       std::vector<uint64_t> cummulative_elements_from_bottom;
       uint64_t running_total_access = 0, running_total_elements = 0;
       for (auto entry = totals.rbegin(); entry != totals.rend(); ++entry) {
-          running_total_access += entry.first * entry.second;
+          running_total_access += entry->first * entry->second;
           cummulative_access_from_bottom.push_back(running_total_access);
-          running_total_elements += entry.second;
+          running_total_elements += entry->second;
           cummulative_elements_from_bottom.push_back(running_total_elements)
       }
       std::cout << "Writing distribution: " << filename.c_str() << std::endl;
       std::ofstream writer(filename, std::ios::out);
-      writer << "access_count,num_elements,percentage,access_count*num_elements,cumulate(ac*ne),E/total_access,"
-          << "cummulate(elements),cummulative / total_elements,cummulate_access_from_bottom, total_items: " 
-          << total_items << " total_access: " << total_access << std::endl;
+      writer << "access_count,"
+          << "num_elements,"
+          << "percentage,"
+          << "access_count * num_elements,"
+          << "cumulate(ac * ne),"
+          << "E / total_access, "
+          << "cummulate(elements),"
+          << "cummulative / total_elements,"
+          << "cummulate_access_from_bottom,"
+          << "cummulate/total_access,"
+          << "cummulate_elements_From_bottom,"
+          << "elements_from_bottom / total_elements,"
+          << "total_items: " << total_items 
+          << ",total_access: " << total_access << std::endl;
       uint64_t cummulatative_access = 0, cummulative_elements = 0;
       unsigned int index = 0;
       for (auto entry : totals) {
