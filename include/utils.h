@@ -650,11 +650,40 @@ namespace diskann {
       for (auto entry : totals) {
           total_access += entry.first * entry.second;
       }
+      std::vector<uint64_t> cummulative_access_from_bottom;
+      std::vector<uint64_t> cummulative_elements_from_bottom;
+      uint64_t running_total_access = 0, running_total_elements = 0;
+      for (auto entry = totals.rbegin(); entry != totals.rend(); ++entry) {
+          running_total_access += entry.first * entry.second;
+          cummulative_access_from_bottom.push_back(running_total_access);
+          running_total_elements += entry.second;
+          cummulative_elements_from_bottom.push_back(running_total_elements)
+      }
       std::cout << "Writing distribution: " << filename.c_str() << std::endl;
       std::ofstream writer(filename, std::ios::out);
-      writer << "access_count,num_elements,percentage, total_items: " << total_items << " total_access: " << total_access << std::endl;
+      writer << "access_count,num_elements,percentage,access_count*num_elements,cumulate(ac*ne),E/total_access,"
+          << "cummulate(elements),cummulative / total_elements,cummulate_access_from_bottom, total_items: " 
+          << total_items << " total_access: " << total_access << std::endl;
+      uint64_t cummulatative_access = 0, cummulative_elements = 0;
+      unsigned int index = 0;
       for (auto entry : totals) {
-          writer <<entry.first << "," << entry.second << "," << static_cast<float>(entry.first * entry.second) / total_access << std::endl;
+          product = entry.first * entry.second;
+          cummulatative_access += product;
+          cummulative_elements += entry.second;
+          writer <<entry.first << "," 
+              << entry.second << "," 
+              << static_cast<float>(product) / total_access << "," 
+              << product << "," 
+              << cummulatative_access << "," 
+              << static_cast<float>(cummulatative_access) / total_access << "," 
+              << cummulative_elements << "," 
+              << static_cast<float>(cummulative_elements) / total_items<< ","
+              << cummulative_access_from_bottom[index] << ","
+              << static_cast<float>(cummulative_access_from_bottom[index]) / total_access << ","
+              << cummulative_elements_from_bottom[index]
+              << static_cast<float>(cummulative_elements_from_bottom[index]) / total_items << ","
+              << << std::endl;
+          ++index;
       }
       writer.close();
       size_t bytes_written = npts;
