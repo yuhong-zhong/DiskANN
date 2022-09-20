@@ -657,7 +657,7 @@ namespace diskann {
           running_total_access += entry->first * entry->second;
           cummulative_access_from_bottom.push_back(running_total_access);
           running_total_elements += entry->second;
-          cummulative_elements_from_bottom.push_back(running_total_elements)
+          cummulative_elements_from_bottom.push_back(running_total_elements);
       }
       std::cout << "Writing distribution: " << filename.c_str() << std::endl;
       std::ofstream writer(filename, std::ios::out);
@@ -678,7 +678,7 @@ namespace diskann {
       uint64_t cummulatative_access = 0, cummulative_elements = 0;
       unsigned int index = 0;
       for (auto entry : totals) {
-          product = entry.first * entry.second;
+          uint64_t product = entry.first * entry.second;
           cummulatative_access += product;
           cummulative_elements += entry.second;
           writer <<entry.first << "," 
@@ -693,7 +693,7 @@ namespace diskann {
               << static_cast<float>(cummulative_access_from_bottom[index]) / total_access << ","
               << cummulative_elements_from_bottom[index]
               << static_cast<float>(cummulative_elements_from_bottom[index]) / total_items << ","
-              << << std::endl;
+              << std::endl;
           ++index;
       }
       writer.close();
