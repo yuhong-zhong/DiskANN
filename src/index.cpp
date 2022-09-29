@@ -244,6 +244,9 @@ namespace diskann {
     if (_max_points == 0) {
       _max_points = 1;
     }
+    // INSTRUMENTED
+    _visited_counts.resize(_max_points);
+    // END INSTRUMENTED
     const size_t total_internal_points = _max_points + _num_frozen_pts;
     alloc_aligned(((void **) &_data),
                   total_internal_points * _aligned_dim * sizeof(T),
@@ -1612,7 +1615,9 @@ namespace diskann {
     diskann::cout << "Index built with degree: max:" << max
                   << "  avg:" << (float) total / (float) (_nd + _num_frozen_pts)
                   << "  min:" << min << "  count(deg<2):" << cnt << std::endl;
+    // INSTRUMENTED
     _visited_counts.resize(_max_points);
+    // END INSTRUMENTED
     _max_observed_degree = (std::max)((unsigned) max, _max_observed_degree);
     _has_built = true;
   }
