@@ -548,12 +548,17 @@ namespace diskann {
                             const char *index_prefix) {
 #else
   template<typename T>
-  int PQFlashIndex<T>::load(uint32_t num_threads, const char *index_prefix, const char* pq_prefix) {
+  int PQFlashIndex<T>::load(uint32_t num_threads, const char *index_prefix, const char* pq_prefix, const char* pivots_filepath) {
 #endif
     if (pq_prefix == nullptr) {
       pq_prefix = index_prefix;
     }
+
     std::string pq_table_bin = std::string(pq_prefix) + "_pq_pivots.bin";
+    if (pivots_filepath != nullptr) {
+      pq_table_bin = pivots_filepath;
+    }
+
     std::string pq_compressed_vectors =
         std::string(pq_prefix) + "_pq_compressed.bin";
     std::string disk_index_file =
