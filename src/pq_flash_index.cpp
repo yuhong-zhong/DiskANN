@@ -548,7 +548,12 @@ namespace diskann {
                             const char *index_prefix) {
 #else
   template<typename T>
-  int PQFlashIndex<T>::load(uint32_t num_threads, const char *index_prefix, const char* pq_prefix, const char* pivots_filepath) {
+  int PQFlashIndex<T>::load(
+      uint32_t num_threads,
+      const char *index_prefix, 
+      const char* pq_prefix, 
+      const char* pivots_filepath,
+      const char* index_filepath) {
 #endif
     if (pq_prefix == nullptr) {
       pq_prefix = index_prefix;
@@ -576,6 +581,9 @@ namespace diskann {
                      METADATA_SIZE);
 #endif
 
+    if (index_filepath != nullptr) {
+      disk_index_file = index_filepath;
+    }
     this->disk_index_file = disk_index_file;
 
     if (pq_file_num_centroids != 256) {
