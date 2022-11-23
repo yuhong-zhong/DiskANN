@@ -155,10 +155,10 @@ namespace diskann {
     }
 
     // alloc and compute transpose
-    tables_tr = new float[256 * this->ndims];
-    for (_u64 i = 0; i < 256; i++) {
+    tables_tr = new float[NUM_PQ_CENTROIDS * this->ndims];
+    for (_u64 i = 0; i < NUM_PQ_CENTROIDS; i++) {
       for (_u64 j = 0; j < this->ndims; j++) {
-        tables_tr[j * 256 + i] = tables[i * this->ndims + j];
+        tables_tr[j * NUM_PQ_CENTROIDS + i] = tables[i * this->ndims + j];
       }
     }
   }
@@ -185,14 +185,14 @@ namespace diskann {
   // assumes pre-processed query
   void FixedChunkPQTable::populate_chunk_distances(const float* query_vec,
                                                    float*       dist_vec) {
-    memset(dist_vec, 0, 256 * n_chunks * sizeof(float));
+    memset(dist_vec, 0, NUM_PQ_CENTROIDS * n_chunks * sizeof(float));
     // chunk wise distance computation
     for (_u64 chunk = 0; chunk < n_chunks; chunk++) {
       // sum (q-c)^2 for the dimensions associated with this chunk
-      float* chunk_dists = dist_vec + (256 * chunk);
+      float* chunk_dists = dist_vec + (NUM_PQ_CENTROIDS * chunk);
       for (_u64 j = chunk_offsets[chunk]; j < chunk_offsets[chunk + 1]; j++) {
-        const float* centers_dim_vec = tables_tr + (256 * j);
-        for (_u64 idx = 0; idx < 256; idx++) {
+        const float* centers_dim_vec = tables_tr + (NUM_PQ_CENTROIDS * j);
+        for (_u64 idx = 0; idx < NUM_PQ_CENTROIDS; idx++) {
           double diff = centers_dim_vec[idx] - (query_vec[j]);
           chunk_dists[idx] += (float) (diff * diff);
         }
@@ -204,7 +204,7 @@ namespace diskann {
     float res = 0;
     for (_u64 chunk = 0; chunk < n_chunks; chunk++) {
       for (_u64 j = chunk_offsets[chunk]; j < chunk_offsets[chunk + 1]; j++) {
-        const float* centers_dim_vec = tables_tr + (256 * j);
+        const float* centers_dim_vec = tables_tr + (NUM_PQ_CENTROIDS * j);
         float        diff = centers_dim_vec[base_vec[chunk]] - (query_vec[j]);
         res += diff * diff;
       }
@@ -217,7 +217,7 @@ namespace diskann {
     float res = 0;
     for (_u64 chunk = 0; chunk < n_chunks; chunk++) {
       for (_u64 j = chunk_offsets[chunk]; j < chunk_offsets[chunk + 1]; j++) {
-        const float* centers_dim_vec = tables_tr + (256 * j);
+        const float* centers_dim_vec = tables_tr + (NUM_PQ_CENTROIDS * j);
         float        diff = centers_dim_vec[base_vec[chunk]] *
                      query_vec[j];  // assumes centroid is 0 to
                                     // prevent translation errors
@@ -232,7 +232,7 @@ namespace diskann {
   void FixedChunkPQTable::inflate_vector(_u8* base_vec, float* out_vec) {
     for (_u64 chunk = 0; chunk < n_chunks; chunk++) {
       for (_u64 j = chunk_offsets[chunk]; j < chunk_offsets[chunk + 1]; j++) {
-        const float* centers_dim_vec = tables_tr + (256 * j);
+        const float* centers_dim_vec = tables_tr + (NUM_PQ_CENTROIDS * j);
         out_vec[j] = centers_dim_vec[base_vec[chunk]] + centroid[j];
       }
     }
@@ -240,14 +240,14 @@ namespace diskann {
 
   void FixedChunkPQTable::populate_chunk_inner_products(const float* query_vec,
                                                         float*       dist_vec) {
-    memset(dist_vec, 0, 256 * n_chunks * sizeof(float));
+    memset(dist_vec, 0, NUM_PQ_CENTROIDS * n_chunks * sizeof(float));
     // chunk wise distance computation
     for (_u64 chunk = 0; chunk < n_chunks; chunk++) {
       // sum (q-c)^2 for the dimensions associated with this chunk
-      float* chunk_dists = dist_vec + (256 * chunk);
+      float* chunk_dists = dist_vec + (NUM_PQ_CENTROIDS * chunk);
       for (_u64 j = chunk_offsets[chunk]; j < chunk_offsets[chunk + 1]; j++) {
-        const float* centers_dim_vec = tables_tr + (256 * j);
-        for (_u64 idx = 0; idx < 256; idx++) {
+        const float* centers_dim_vec = tables_tr + (NUM_PQ_CENTROIDS * j);
+        for (_u64 idx = 0; idx < NUM_PQ_CENTROIDS; idx++) {
           double prod =
               centers_dim_vec[idx] * query_vec[j];  // assumes that we are not
                                                     // shifting the vectors to
@@ -277,9 +277,9 @@ namespace diskann {
     _mm_prefetch((char*) (pq_ids + 128), _MM_HINT_T0);
     memset(dists_out, 0, n_pts * sizeof(float));
     for (_u64 chunk = 0; chunk < pq_nchunks; chunk++) {
-      const float* chunk_dists = pq_dists + 256 * chunk;
+      const float* chunk_dists = pq_dists + NUM_PQ_CENTROIDS * chunk;
       if (chunk < pq_nchunks - 1) {
-        _mm_prefetch((char*) (chunk_dists + 256), _MM_HINT_T0);
+        _mm_prefetch((char*) (chunk_dists + NUM_PQ_CENTROIDS), _MM_HINT_T0);
       }
       for (_u64 idx = 0; idx < n_pts; idx++) {
         _u8 pq_centerid = pq_ids[pq_nchunks * idx + chunk];
@@ -887,7 +887,7 @@ namespace diskann {
         }
       }
 
-      if (num_centers > 256) {
+      if (num_centers > NUM_PQ_CENTROIDS) {
         compressed_file_writer.write(
             (char*) (block_compressed_base.get()),
             cur_blk_size * num_pq_chunks * sizeof(uint32_t));
@@ -933,16 +933,17 @@ namespace diskann {
 
     std::cout << "Compressing base for disk-PQ into " << disk_pq_dims
               << " chunks " << std::endl;
-    generate_pq_pivots(train_data, train_data_size, (uint32_t) dim, 256,
+    generate_pq_pivots(train_data, train_data_size, (uint32_t) dim,
+                       NUM_PQ_CENTROIDS,
                        (uint32_t) disk_pq_dims, NUM_KMEANS_REPS_PQ,
                        disk_pq_pivots_path, false);
     if (compareMetric == diskann::Metric::INNER_PRODUCT)
       generate_pq_data_from_pivots<float>(
-          data_file_to_use.c_str(), 256, (uint32_t) disk_pq_dims,
+          data_file_to_use.c_str(), NUM_PQ_CENTROIDS, (uint32_t) disk_pq_dims,
           disk_pq_pivots_path, disk_pq_compressed_vectors_path);
     else
       generate_pq_data_from_pivots<T>(
-          data_file_to_use.c_str(), 256, (uint32_t) disk_pq_dims,
+          data_file_to_use.c_str(), NUM_PQ_CENTROIDS, (uint32_t) disk_pq_dims,
           disk_pq_pivots_path, disk_pq_compressed_vectors_path);
   }
 

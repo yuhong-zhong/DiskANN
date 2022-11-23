@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
   } else {
     const std::string data_path(argv[2]);
     const std::string index_prefix_path(argv[3]);
-    const size_t      num_pq_centers = 256;
+    const size_t      num_pq_centers = 16;
     const size_t      num_pq_chunks = (size_t) atoi(argv[4]);
     const float       sampling_rate = atof(argv[5]);
     const bool        opq = atoi(argv[6]) == 0 ? false : true; 

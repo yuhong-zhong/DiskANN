@@ -5,7 +5,7 @@
 
 #include "utils.h"
 
-#define NUM_PQ_CENTROIDS 256
+#define NUM_PQ_CENTROIDS 16
 #define MAX_OPQ_ITERS 20
 #define NUM_KMEANS_REPS_PQ 12
 
