@@ -444,26 +444,12 @@ namespace diskann {
                             const char *index_prefix) {
 #else
   template<typename T>
-  int PQFlashIndex<T>::load(
-      uint32_t num_threads,
-      const char *index_prefix, 
-      const char* pq_prefix, 
-      const char* pivots_filepath,
-      const char* index_filepath) {
+  int PQFlashIndex<T>::load(uint32_t num_threads, const char *index_prefix) {
 #endif
-    if (pq_prefix == nullptr) {
-      pq_prefix = index_prefix;
-    }
-
-    std::string pq_table_bin = std::string(pq_prefix) + "_pq_pivots.bin";
-    if (pivots_filepath != nullptr) {
-      pq_table_bin = pivots_filepath;
-    }
-
+    std::string pq_table_bin = std::string(index_prefix) + "_pq_pivots.bin";
     std::string pq_compressed_vectors =
-        std::string(pq_prefix) + "_pq_compressed.bin";
-    std::string disk_index_file =
-        std::string(index_prefix) + "_disk.index";
+        std::string(index_prefix) + "_pq_compressed.bin";
+    std::string disk_index_file = std::string(index_prefix) + "_disk.index";
     std::string medoids_file = std::string(disk_index_file) + "_medoids.bin";
     std::string centroids_file =
         std::string(disk_index_file) + "_centroids.bin";
@@ -477,9 +463,6 @@ namespace diskann {
                      METADATA_SIZE);
 #endif
 
-    if (index_filepath != nullptr) {
-      disk_index_file = index_filepath;
-    }
     this->disk_index_file = disk_index_file;
 
     if (pq_file_num_centroids != 256) {
@@ -967,39 +950,34 @@ namespace diskann {
 
         // compute node_nbrs <-> query dists in PQ space
         cpu_timer.reset();
-        _u64 nnbrs_filtered = 0;
-        for (_u64 m = 0; m < nnbrs; ++m) {
-          unsigned id = node_nbrs[m];
-          if (visited.find(id) == visited.end()) {
-            nbr_scratch[nnbrs_filtered] = id;
-            nnbrs_filtered++;
-          }
-        }
-
-        compute_dists(nbr_scratch, nnbrs_filtered, dist_scratch);
+        compute_dists(node_nbrs, nnbrs, dist_scratch);
         if (stats != nullptr) {
           stats->n_cmps += (double) nnbrs;
           stats->cpu_us += (double) cpu_timer.elapsed();
         }
 
         // process prefetched nhood
-        for (_u64 m = 0; m < nnbrs_filtered; ++m) {
-          unsigned id = nbr_scratch[m];
-          visited.insert(id);
-          cmps++;
-          float dist = dist_scratch[m];
-          if (dist >= retset[cur_list_size - 1].distance &&
-              (cur_list_size == l_search))
+        for (_u64 m = 0; m < nnbrs; ++m) {
+          unsigned id = node_nbrs[m];
+          if (visited.find(id) != visited.end()) {
             continue;
-          Neighbor nn(id, dist, true);
-          // Return position in sorted list where nn inserted.
-          auto r = InsertIntoPool(retset.data(), cur_list_size, nn);
-          if (cur_list_size < l_search)
-            ++cur_list_size;
-          if (r < nk)
-            // nk logs the best position in the retset that was
-            // updated due to neighbors of n.
-            nk = r;
+          } else {
+            visited.insert(id);
+            cmps++;
+            float dist = dist_scratch[m];
+            if (dist >= retset[cur_list_size - 1].distance &&
+                (cur_list_size == l_search))
+              continue;
+            Neighbor nn(id, dist, true);
+            // Return position in sorted list where nn inserted.
+            auto r = InsertIntoPool(retset.data(), cur_list_size, nn);
+            if (cur_list_size < l_search)
+              ++cur_list_size;
+            if (r < nk)
+              // nk logs the best position in the retset that was
+              // updated due to neighbors of n.
+              nk = r;
+          }
         }
       }
 #ifdef USE_BING_INFRA
@@ -1043,19 +1021,9 @@ namespace diskann {
         full_retset.push_back(
             Neighbor(frontier_nhood.first, cur_expanded_dist, true));
         unsigned *node_nbrs = (node_buf + 1);
-
-        _u64 nnbrs_filtered = 0;
-        for (_u64 m = 0; m < nnbrs; ++m) {
-          unsigned id = node_nbrs[m];
-          if (visited.find(id) == visited.end()) {
-            nbr_scratch[nnbrs_filtered] = id;
-            nnbrs_filtered++;
-          }
-        }
-
         // compute node_nbrs <-> query dist in PQ space
         cpu_timer.reset();
-        compute_dists(nbr_scratch, nnbrs_filtered, dist_scratch);
+        compute_dists(node_nbrs, nnbrs, dist_scratch);
         if (stats != nullptr) {
           stats->n_cmps += (double) nnbrs;
           stats->cpu_us += (double) cpu_timer.elapsed();
