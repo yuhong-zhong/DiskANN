@@ -243,8 +243,8 @@ static T numeric_cast(U value,
  * must be the same size on both platforms.
  */
 using slz_size_type = std::uint64_t;
-static_assert(std::numeric_limits<slz_size_type>::max() >=
-                  std::numeric_limits<std::size_t>::max(),
+static_assert((std::numeric_limits<slz_size_type>::max)() >=
+                  (std::numeric_limits<std::size_t>::max)(),
               "slz_size_type must be >= std::size_t");
 
 template <class T, class Deserializer>
@@ -327,11 +327,11 @@ class sparse_array {
                 "bitmap_type must be able to hold at least BITMAP_NB_BITS.");
   static_assert((std::size_t(1) << BUCKET_SHIFT) == BITMAP_NB_BITS,
                 "(1 << BUCKET_SHIFT) must be equal to BITMAP_NB_BITS.");
-  static_assert(std::numeric_limits<size_type>::max() >= BITMAP_NB_BITS,
+  static_assert((std::numeric_limits<size_type>::max)() >= BITMAP_NB_BITS,
                 "size_type must be big enough to hold BITMAP_NB_BITS.");
   static_assert(std::is_unsigned<bitmap_type>::value,
                 "bitmap_type must be unsigned.");
-  static_assert((std::numeric_limits<bitmap_type>::max() & BUCKET_MASK) ==
+  static_assert(((std::numeric_limits<bitmap_type>::max)() & BUCKET_MASK) ==
                     BITMAP_NB_BITS - 1,
                 "");
 

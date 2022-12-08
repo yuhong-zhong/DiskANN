@@ -93,7 +93,7 @@ class power_of_two_growth_policy {
    */
   std::size_t max_bucket_count() const {
     // Largest power of two.
-    return (std::numeric_limits<std::size_t>::max() / 2) + 1;
+    return ((std::numeric_limits<std::size_t>::max)() / 2) + 1;
   }
 
   /**
@@ -182,7 +182,7 @@ class mod_growth_policy {
   static constexpr double REHASH_SIZE_MULTIPLICATION_FACTOR =
       1.0 * GrowthFactor::num / GrowthFactor::den;
   static const std::size_t MAX_BUCKET_COUNT =
-      std::size_t(double(std::numeric_limits<std::size_t>::max() /
+      std::size_t(double((std::numeric_limits<std::size_t>::max)() /
                          REHASH_SIZE_MULTIPLICATION_FACTOR));
 
   static_assert(REHASH_SIZE_MULTIPLICATION_FACTOR >= 1.1,
@@ -265,7 +265,7 @@ class prime_growth_policy {
          402653189ul, 805306457ul, 1610612741ul, 3221225473ul, 4294967291ul}};
 
     static_assert(
-        std::numeric_limits<decltype(m_iprime)>::max() >= PRIMES.size(),
+        (std::numeric_limits<decltype(m_iprime)>::max)() >= PRIMES.size(),
         "The type of m_iprime is not big enough.");
 
     return PRIMES;
