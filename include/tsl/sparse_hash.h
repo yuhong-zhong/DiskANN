@@ -1382,7 +1382,7 @@ class sparse_hash : private Allocator,
   size_type size() const noexcept { return m_nb_elements; }
 
   size_type max_size() const noexcept {
-    return std::min(std::allocator_traits<Allocator>::max_size(),
+    return (std::min)(std::allocator_traits<Allocator>::max_size(),
                     m_sparse_buckets_data.max_size());
   }
 
@@ -1696,7 +1696,7 @@ class sparse_hash : private Allocator,
   float max_load_factor() const { return m_max_load_factor; }
 
   void max_load_factor(float ml) {
-    m_max_load_factor = std::max(0.1f, std::min(ml, 0.8f));
+    m_max_load_factor = (std::max)(0.1f, (std::min)(ml, 0.8f));
     m_load_threshold_rehash =
         size_type(float(bucket_count()) * m_max_load_factor);
 
@@ -1709,7 +1709,7 @@ class sparse_hash : private Allocator,
   }
 
   void rehash(size_type count) {
-    count = std::max(count,
+    count = (std::max)(count,
                      size_type(std::ceil(float(size()) / max_load_factor())));
     rehash_impl(count);
   }
