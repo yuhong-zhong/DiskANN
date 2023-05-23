@@ -94,7 +94,7 @@ template <typename T> void SSDQueryScratch<T>::reset()
 
 template <typename T> SSDQueryScratch<T>::SSDQueryScratch(size_t aligned_dim, size_t visited_reserve)
 {
-    size_t coord_alloc_size = ROUND_UP(MAX_N_CMPS * aligned_dim, 256);
+    size_t coord_alloc_size = ROUND_UP(MAX_N_CMPS * aligned_dim * sizeof(T), 256);
 
     diskann::alloc_aligned((void **)&coord_scratch, coord_alloc_size, 256);
     diskann::alloc_aligned((void **)&sector_scratch, (size_t)MAX_N_SECTOR_READS * (size_t)SECTOR_LEN, SECTOR_LEN);
