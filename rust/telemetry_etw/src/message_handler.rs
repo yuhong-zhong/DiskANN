@@ -13,6 +13,8 @@ use std::thread;
 
 use win_etw_macros::trace_logging_provider;
 
+use log4rs::append::Append;
+
 trait MessagePublisher {
     fn publish(&self, log_level: LogLevel, message: &str);
 }

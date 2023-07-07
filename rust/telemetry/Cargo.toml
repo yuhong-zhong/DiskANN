@@ -1,14 +1,21 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT license.
 [package]
-name = "build_and_insert_memory_index"
+name = "telemetry"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-diskann = { path = "../../diskann" }
-telemetry_etw = { path = "../../telemetry_etw" }
-vector = { path = "../../vector" }
+lazy_static = "1.4.0"
+log="0.4.17"
+once_cell = "1.17.1"
+prost = "0.11.9"
+prost-types = "0.11.9"
+thiserror = "1.0.40"
+
+[build-dependencies]
+protoc-bin-vendored = "3.0.0"
+prost-build = "0.11.9"
 

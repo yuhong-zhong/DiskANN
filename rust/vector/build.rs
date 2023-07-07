@@ -13,6 +13,14 @@ fn main() {
             .debug(false)
             .target("x86_64-apple-darwin")
             .compile("nativefunctions.lib");
+    } else if cfg!(target_os = "linux") {
+        std::env::set_var("CFLAGS", "-M -mavx2 -mfma -fopenmp -MP -O2 -D NDEBUG -D MKL_ILP64 -D USE_AVX2 -D USE_ACCELERATED_PQ -D NOMINMAX");
+
+        cc::Build::new()
+            .file("distance.c")
+            .warnings_into_errors(true)
+            .debug(false)
+            .compile("nativefunctions");
     } else {
         std::env::set_var("CFLAGS", "/permissive- /MP /ifcOutput /GS- /W3 /Gy /Zi /Gm- /O2 /Ob2 /Zc:inline /fp:fast /D NDEBUG /D MKL_ILP64 /D USE_AVX2 /D USE_ACCELERATED_PQ /D NOMINMAX /fp:except- /errorReport:prompt /WX /openmp:experimental /Zc:forScope /GR /arch:AVX2 /Gd /Oy /Oi /MD /std:c++14 /FC /EHsc /nologo /Ot");
         // std::env::set_var("CFLAGS", "/permissive- /MP /ifcOutput /GS- /W3 /Gy /Zi /Gm- /Obd /Zc:inline /fp:fast /D DEBUG /D MKL_ILP64 /D USE_AVX2 /D USE_ACCELERATED_PQ /D NOMINMAX /fp:except- /errorReport:prompt /WX /openmp:experimental /Zc:forScope /GR /arch:AVX512 /Gd /Oy /Oi /MD /std:c++14 /FC /EHsc /nologo /Ot");
@@ -26,4 +34,3 @@ fn main() {
         println!("cargo:rustc-link-arg=nativefunctions.lib");
     }
 }
-

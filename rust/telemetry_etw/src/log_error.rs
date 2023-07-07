@@ -4,7 +4,7 @@
  */
 use std::sync::mpsc::SendError;
 
-use crate::logger::indexlog::Log;
+use telemetry::::indexlog::Log;
 
 #[derive(thiserror::Error, Debug, Clone)]
 pub enum LogError {

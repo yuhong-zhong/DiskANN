@@ -10,6 +10,6 @@ edition = "2021"
 [dependencies]
 clap = { version = "4.3.8", features = ["derive"] }
 diskann = { path = "../../diskann" }
-logger = { path = "../../logger" }
+telemetry_etw = { path = "../../telemetry_etw" }
 vector = { path = "../../vector" }
 

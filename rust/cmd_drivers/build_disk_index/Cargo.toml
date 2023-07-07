@@ -9,6 +9,6 @@ edition = "2021"
 
 [dependencies]
 diskann = { path = "../../diskann" }
-logger = { path = "../../logger" }
+telemetry_etw = { path = "../../telemetry_etw" }
 vector = { path = "../../vector" }
 openblas-src = { version = "0.10.8", features = ["system", "static"] }

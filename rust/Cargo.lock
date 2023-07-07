@@ -127,7 +127,7 @@ name = "build_and_insert_delete_memory_index"
 version = "0.1.0"
 dependencies = [
  "diskann",
- "logger",
+ "telemetry_etw",
  "vector",
 ]
 
@@ -136,7 +136,7 @@ name = "build_and_insert_memory_index"
 version = "0.1.0"
 dependencies = [
  "diskann",
- "logger",
+ "telemetry_etw",
  "vector",
 ]
 
@@ -145,8 +145,8 @@ name = "build_disk_index"
 version = "0.1.0"
 dependencies = [
  "diskann",
- "logger",
  "openblas-src",
+ "telemetry_etw",
  "vector",
 ]
 
@@ -156,7 +156,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "diskann",
- "logger",
+ "telemetry_etw",
  "vector",
 ]
 
@@ -472,7 +472,6 @@ dependencies = [
  "crossbeam",
  "half 2.2.1",
  "hashbrown 0.13.2",
- "logger",
  "num-traits",
  "once_cell",
  "openblas-src",
@@ -480,6 +479,8 @@ dependencies = [
  "rand",
  "rayon",
  "serde",
+ "telemetry",
+ "telemetry_etw",
  "thiserror",
  "vector",
  "winapi",
@@ -734,7 +735,7 @@ name = "load_and_insert_memory_index"
 version = "0.1.0"
 dependencies = [
  "diskann",
- "logger",
+ "telemetry_etw",
  "vector",
 ]
 
@@ -743,22 +744,6 @@ name = "log"
 version = "0.4.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b06a4cde4c0f271a446782e3eff8de789548ce57dbc8eca9292c27f4a42004b4"
-
-[[package]]
-name = "logger"
-version = "0.1.0"
-dependencies = [
- "lazy_static",
- "log",
- "once_cell",
- "prost",
- "prost-build",
- "prost-types",
- "thiserror",
- "vcpkg",
- "win_etw_macros",
- "win_etw_provider",
-]
 
 [[package]]
 name = "memoffset"
@@ -1050,6 +1035,56 @@ dependencies = [
 ]
 
 [[package]]
+name = "protoc-bin-vendored"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "005ca8623e5633e298ad1f917d8be0a44bcf406bf3cde3b80e63003e49a3f27d"
+dependencies = [
+ "protoc-bin-vendored-linux-aarch_64",
+ "protoc-bin-vendored-linux-ppcle_64",
+ "protoc-bin-vendored-linux-x86_32",
+ "protoc-bin-vendored-linux-x86_64",
+ "protoc-bin-vendored-macos-x86_64",
+ "protoc-bin-vendored-win32",
+]
+
+[[package]]
+name = "protoc-bin-vendored-linux-aarch_64"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8fb9fc9cce84c8694b6ea01cc6296617b288b703719b725b8c9c65f7c5874435"
+
+[[package]]
+name = "protoc-bin-vendored-linux-ppcle_64"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02d2a07dcf7173a04d49974930ccbfb7fd4d74df30ecfc8762cf2f895a094516"
+
+[[package]]
+name = "protoc-bin-vendored-linux-x86_32"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d54fef0b04fcacba64d1d80eed74a20356d96847da8497a59b0a0a436c9165b0"
+
+[[package]]
+name = "protoc-bin-vendored-linux-x86_64"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b8782f2ce7d43a9a5c74ea4936f001e9e8442205c244f7a3d4286bd4c37bc924"
+
+[[package]]
+name = "protoc-bin-vendored-macos-x86_64"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b5de656c7ee83f08e0ae5b81792ccfdc1d04e7876b1d9a38e6876a9e09e02537"
+
+[[package]]
+name = "protoc-bin-vendored-win32"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9653c3ed92974e34c5a6e0a510864dab979760481714c172e0a34e437cb98804"
+
+[[package]]
 name = "quote"
 version = "1.0.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1330,6 +1365,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "telemetry"
+version = "0.1.0"
+dependencies = [
+ "lazy_static",
+ "log",
+ "once_cell",
+ "prost",
+ "prost-build",
+ "prost-types",
+ "protoc-bin-vendored",
+ "thiserror",
+]
+
+[[package]]
+name = "telemetry_etw"
+version = "0.1.0"
+dependencies = [
+ "lazy_static",
+ "log",
+ "once_cell",
+ "prost-build",
+ "telemetry",
+ "thiserror",
+ "win_etw_macros",
+ "win_etw_provider",
+]
+
+[[package]]
 name = "tempfile"
 version = "3.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1443,9 +1506,9 @@ checksum = "711b9620af191e0cdc7468a8d14e709c3dcdb115b36f838e601583af800a370a"
 
 [[package]]
 name = "uuid"
-version = "1.3.4"
+version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0fa2982af2eec27de306107c027578ff7f423d65f7250e40ce0fea8f45248b81"
+checksum = "d023da39d1fde5a8a3fe1f3e01ca9632ada0a63e9797de55a879d6e2236277be"
 dependencies = [
  "sha1_smol",
 ]
