@@ -744,7 +744,7 @@ int PQFlashIndex<T, LabelT>::load_from_separate_paths(uint32_t num_threads, cons
                         if (cnt == 0)
                             label = (LabelT)std::stoul(token);
                         else
-                            uint32_t medoid = 0;
+                            medoid = 0;
                         cnt++;
                     }
                     _filter_to_medoid_id[label] = medoid;
