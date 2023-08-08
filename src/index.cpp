@@ -358,22 +358,24 @@ void Index<T, TagT, LabelT>::save(const char *filename, bool compact_before_save
                 universal_label_writer.close();
             }
 
-            if (_pts_to_labels.size() > 0)
-            {
-                std::ofstream label_writer(std::string(filename) + "_labels.txt");
-                assert(label_writer.is_open());
-                for (uint32_t i = 0; i < _pts_to_labels.size(); i++)
-                {
-                    for (uint32_t j = 0; j < (_pts_to_labels[i].size() - 1); j++)
-                    {
-                        label_writer << _pts_to_labels[i][j] << ",";
-                    }
-                    if (_pts_to_labels[i].size() != 0)
-                        label_writer << _pts_to_labels[i][_pts_to_labels[i].size() - 1];
-                    label_writer << std::endl;
-                }
-                label_writer.close();
-            }
+            //if (_pts_to_labels.size() > 0)
+            //{
+            //    std::ofstream label_writer(std::string(filename) + "_labels.txt");
+            //    assert(label_writer.is_open());
+            //    for (uint32_t i = 0; i < _pts_to_labels.size(); i++)
+            //    {
+            //        for (uint32_t j = 0; j < (_pts_to_labels[i].size() - 1); j++)
+            //        {
+            //            label_writer << _pts_to_labels[i][j] << ",";
+            //        }
+            //        if (_pts_to_labels[i].size() != 0)
+            //            label_writer << _pts_to_labels[i][_pts_to_labels[i].size() - 1];
+            //        label_writer << std::endl;
+            //    }
+            //    label_writer.close();
+            //}
+
+            
         }
 
         std::string graph_file = std::string(filename);
@@ -604,7 +606,8 @@ void Index<T, TagT, LabelT>::load(const char *filename, uint32_t num_threads, ui
     if (file_exists(labels_file))
     {
         _label_map = load_label_map(labels_map_file);
-        parse_label_file_in_bitset(labels_file, label_num_pts, _label_map.size());
+        _labelBitsetData.Load(labels_file);
+//        parse_label_file_in_bitset(labels_file, label_num_pts, _label_map.size());
 
         assert(label_num_pts == data_file_num_pts);
         if (file_exists(labels_to_medoids))
@@ -669,7 +672,7 @@ void Index<T, TagT, LabelT>::load(const char *filename, uint32_t num_threads, ui
     if (_query_scratch.size() == 0)
     {
         initialize_query_scratch(num_threads, search_l, search_l, (uint32_t)_max_range_of_loaded_graph, _indexingMaxC,
-                                 _dim, _bitmask_buf._bitmask_size);
+                                 _dim, _labelBitsetData.GetBitsets()._bitmask_size);
     }
 }
 
@@ -898,36 +901,36 @@ template <typename T, typename TagT, typename LabelT> std::vector<uint32_t> Inde
 }
 
 // Find common filter between a node's labels and a given set of labels, while taking into account universal label
-template <typename T, typename TagT, typename LabelT>
-bool Index<T, TagT, LabelT>::detect_common_filters(uint32_t point_id, bool search_invocation,
-                                                   const std::vector<LabelT> &incoming_labels)
-{
-    auto &curr_node_labels = _pts_to_labels[point_id];
-    std::vector<LabelT> common_filters;
-    std::set_intersection(incoming_labels.begin(), incoming_labels.end(), curr_node_labels.begin(),
-                          curr_node_labels.end(), std::back_inserter(common_filters));
-    if (common_filters.size() > 0)
-    {
-        // This is to reduce the repetitive calls. If common_filters size is > 0 , we dont need to check further for
-        // universal label
-        return true;
-    }
-    if (_use_universal_label)
-    {
-        if (!search_invocation)
-        {
-            if (std::find(incoming_labels.begin(), incoming_labels.end(), _universal_label) != incoming_labels.end() ||
-                std::find(curr_node_labels.begin(), curr_node_labels.end(), _universal_label) != curr_node_labels.end())
-                common_filters.push_back(_universal_label);
-        }
-        else
-        {
-            if (std::find(curr_node_labels.begin(), curr_node_labels.end(), _universal_label) != curr_node_labels.end())
-                common_filters.push_back(_universal_label);
-        }
-    }
-    return (common_filters.size() > 0);
-}
+//template <typename T, typename TagT, typename LabelT>
+//bool Index<T, TagT, LabelT>::detect_common_filters(uint32_t point_id, bool search_invocation,
+//                                                   const std::vector<LabelT> &incoming_labels)
+//{
+//    auto &curr_node_labels = _pts_to_labels[point_id];
+//    std::vector<LabelT> common_filters;
+//    std::set_intersection(incoming_labels.begin(), incoming_labels.end(), curr_node_labels.begin(),
+//                          curr_node_labels.end(), std::back_inserter(common_filters));
+//    if (common_filters.size() > 0)
+//    {
+//        // This is to reduce the repetitive calls. If common_filters size is > 0 , we dont need to check further for
+//        // universal label
+//        return true;
+//    }
+//    if (_use_universal_label)
+//    {
+//        if (!search_invocation)
+//        {
+//            if (std::find(incoming_labels.begin(), incoming_labels.end(), _universal_label) != incoming_labels.end() ||
+//                std::find(curr_node_labels.begin(), curr_node_labels.end(), _universal_label) != curr_node_labels.end())
+//                common_filters.push_back(_universal_label);
+//        }
+//        else
+//        {
+//            if (std::find(curr_node_labels.begin(), curr_node_labels.end(), _universal_label) != curr_node_labels.end())
+//                common_filters.push_back(_universal_label);
+//        }
+//    }
+//    return (common_filters.size() > 0);
+//}
 
 template <typename T, typename TagT, typename LabelT>
 std::pair<uint32_t, uint32_t> Index<T, TagT, LabelT>::iterate_to_fixed_point(
@@ -1014,18 +1017,19 @@ std::pair<uint32_t, uint32_t> Index<T, TagT, LabelT>::iterate_to_fixed_point(
     };
 
     // only support one filter label
+    auto& bitmask_buf = _labelBitsetData.GetBitsets();
     std::array<std::uint64_t, 10> local_buf;
     simple_bitmask_full_val bitmask_full_val;
     if (use_filter)
     {
-        if (_bitmask_buf._bitmask_size <= 10)
+        if (bitmask_buf._bitmask_size <= 10)
         {
             local_buf.fill(0);
             bitmask_full_val._mask = local_buf.data();
         }
         else
         {
-            query_bitmask_buf.resize(_bitmask_buf._bitmask_size, 0);
+            query_bitmask_buf.resize(bitmask_buf._bitmask_size, 0);
             bitmask_full_val._mask = query_bitmask_buf.data();
         }
         
@@ -1054,7 +1058,7 @@ std::pair<uint32_t, uint32_t> Index<T, TagT, LabelT>::iterate_to_fixed_point(
 
         if (use_filter)
         {
-            simple_bitmask bm(_bitmask_buf.get_bitmask(id), _bitmask_buf._bitmask_size);
+            simple_bitmask bm(bitmask_buf.get_bitmask(id), bitmask_buf._bitmask_size);
             
             if (!bm.test_full_mask_val(bitmask_full_val))
             {
@@ -1132,7 +1136,7 @@ std::pair<uint32_t, uint32_t> Index<T, TagT, LabelT>::iterate_to_fixed_point(
                 if (use_filter)
                 {
                     // NOTE: NEED TO CHECK IF THIS CORRECT WITH NEW LOCKS.
-                    simple_bitmask bm(_bitmask_buf.get_bitmask(id), _bitmask_buf._bitmask_size);
+                    simple_bitmask bm(bitmask_buf.get_bitmask(id), bitmask_buf._bitmask_size);
 
                     if (!bm.test_full_mask_val(bitmask_full_val))
                     {
@@ -1210,12 +1214,22 @@ void Index<T, TagT, LabelT>::search_for_point_and_prune(int location, uint32_t L
     else
     {
         std::vector<uint32_t> filter_specific_start_nodes;
-        for (auto &x : _pts_to_labels[location])
-            filter_specific_start_nodes.emplace_back(_label_to_medoid_id[x]);
+        std::vector<LabelT> labelsInNode;
+        
+        auto nodeLabelCount = _labelData.GetNodeLabelCount(location);
+        for (uint16_t i = 0; i < nodeLabelCount; i++)
+        {
+            auto label = _labelData.GetNodeLabel(location, i);
+            labelsInNode.push_back(static_cast<LabelT>(label));
+            filter_specific_start_nodes.emplace_back(_label_to_medoid_id[label]);
+        }
+
+        //for (auto &x : _pts_to_labels[location])
+        //    filter_specific_start_nodes.emplace_back(_label_to_medoid_id[x]);
 
         _data_store->get_vector(location, scratch->aligned_query());
         iterate_to_fixed_point(scratch->aligned_query(), filteredLindex, filter_specific_start_nodes, scratch, true,
-                               _pts_to_labels[location], false);
+            labelsInNode, false);
     }
 
     auto &pool = scratch->pool();
@@ -1261,6 +1275,7 @@ void Index<T, TagT, LabelT>::occlude_list(const uint32_t location, std::vector<N
     // Initialize occlude_factor to pool.size() many 0.0f values for correctness
     occlude_factor.insert(occlude_factor.end(), pool.size(), 0.0f);
 
+    auto& bitmask_buf = _labelBitsetData.GetBitsets();
     float cur_alpha = 1;
     while (cur_alpha <= alpha && result.size() < degree)
     {
@@ -1299,8 +1314,8 @@ void Index<T, TagT, LabelT>::occlude_list(const uint32_t location, std::vector<N
                     uint32_t a = iter->id;
                     uint32_t b = iter2->id;
                     
-                    simple_bitmask bm1(_bitmask_buf.get_bitmask(a), _bitmask_buf._bitmask_size);
-                    simple_bitmask bm2(_bitmask_buf.get_bitmask(b), _bitmask_buf._bitmask_size);
+                    simple_bitmask bm1(bitmask_buf.get_bitmask(a), bitmask_buf._bitmask_size);
+                    simple_bitmask bm2(bitmask_buf.get_bitmask(b), bitmask_buf._bitmask_size);
 
                     prune_allowed = bm1.test_full_mask_contain(bm2);
                 }
@@ -1965,12 +1980,12 @@ void Index<T, TagT, LabelT>::build(const std::string &data_file, const size_t nu
     else
     {
         // TODO: this should ideally happen in save()
+        uint32_t unv_label_as_num = 0;
         convert_labels_string_to_int(build_params.label_file, labels_file_to_use, mem_labels_int_map_file,
-                                     build_params.universal_label);
+                                     build_params.universal_label, unv_label_as_num);
         if (build_params.universal_label != "")
         {
-            LabelT unv_label_as_num = 0;
-            this->set_universal_label(unv_label_as_num);
+            this->set_universal_label(static_cast<LabelT>(unv_label_as_num));
         }
         this->build_filtered_index(data_file.c_str(), labels_file_to_use, points_to_load,
                                    build_params.index_write_params);
@@ -2021,117 +2036,128 @@ LabelT Index<T, TagT, LabelT>::get_converted_label(const std::string &raw_label)
     }
 }
 
+//template <typename T, typename TagT, typename LabelT>
+//void Index<T, TagT, LabelT>::parse_label_file(const std::string &label_file, size_t &num_points)
+//{
+//    // Format of Label txt file: filters with comma separators
+//
+//    std::ifstream infile(label_file);
+//    if (infile.fail())
+//    {
+//        throw diskann::ANNException(std::string("Failed to open file ") + label_file, -1);
+//    }
+//
+//    std::string line, token;
+//    uint32_t line_cnt = 0;
+//
+//    while (std::getline(infile, line))
+//    {
+//        line_cnt++;
+//    }
+//    _pts_to_labels.resize(line_cnt, std::vector<LabelT>());
+//
+//    infile.clear();
+//    infile.seekg(0, std::ios::beg);
+//    line_cnt = 0;
+//
+//    while (std::getline(infile, line))
+//    {
+//        std::istringstream iss(line);
+//        std::vector<LabelT> lbls(0);
+//        getline(iss, token, '\t');
+//        std::istringstream new_iss(token);
+//        while (getline(new_iss, token, ','))
+//        {
+//            token.erase(std::remove(token.begin(), token.end(), '\n'), token.end());
+//            token.erase(std::remove(token.begin(), token.end(), '\r'), token.end());
+//            LabelT token_as_num = (LabelT)std::stoul(token);
+//            lbls.push_back(token_as_num);
+//            _labels.insert(token_as_num);
+//        }
+//        if (lbls.size() <= 0)
+//        {
+//            diskann::cout << "No label found";
+//            exit(-1);
+//        }
+//        std::sort(lbls.begin(), lbls.end());
+//        _pts_to_labels[line_cnt] = lbls;
+//        line_cnt++;
+//    }
+//    num_points = (size_t)line_cnt;
+//    diskann::cout << "Identified " << _labels.size() << " distinct label(s)" << std::endl;
+//}
+
+//template <typename T, typename TagT, typename LabelT>
+//void Index<T, TagT, LabelT>::convert_pts_label_to_bitmask(std::vector<std::vector<LabelT>>& pts_to_labels, simple_bitmask_buf& bitmask_buf, size_t num_labels)
+//{
+//    _bitmask_buf._bitmask_size = simple_bitmask::get_bitmask_size(num_labels);
+//    _bitmask_buf._buf.resize(pts_to_labels.size() * _bitmask_buf._bitmask_size, 0);
+//
+//    for (size_t i = 0; i < pts_to_labels.size(); i++)
+//    {
+//        for (size_t j = 0; j < pts_to_labels[i].size(); j++)
+//        {
+//            simple_bitmask bm(_bitmask_buf.get_bitmask(i), _bitmask_buf._bitmask_size);
+//            bm.set(pts_to_labels[i][j]);
+//        }
+//    }
+//}
+
 template <typename T, typename TagT, typename LabelT>
-void Index<T, TagT, LabelT>::parse_label_file(const std::string &label_file, size_t &num_points)
+void Index<T, TagT, LabelT>::write_int_bitset_binary(const std::string& outFileName)
 {
-    // Format of Label txt file: filters with comma separators
-
-    std::ifstream infile(label_file);
-    if (infile.fail())
-    {
-        throw diskann::ANNException(std::string("Failed to open file ") + label_file, -1);
-    }
-
-    std::string line, token;
-    uint32_t line_cnt = 0;
-
-    while (std::getline(infile, line))
-    {
-        line_cnt++;
-    }
-    _pts_to_labels.resize(line_cnt, std::vector<LabelT>());
-
-    infile.clear();
-    infile.seekg(0, std::ios::beg);
-    line_cnt = 0;
-
-    while (std::getline(infile, line))
-    {
-        std::istringstream iss(line);
-        std::vector<LabelT> lbls(0);
-        getline(iss, token, '\t');
-        std::istringstream new_iss(token);
-        while (getline(new_iss, token, ','))
-        {
-            token.erase(std::remove(token.begin(), token.end(), '\n'), token.end());
-            token.erase(std::remove(token.begin(), token.end(), '\r'), token.end());
-            LabelT token_as_num = (LabelT)std::stoul(token);
-            lbls.push_back(token_as_num);
-            _labels.insert(token_as_num);
-        }
-        if (lbls.size() <= 0)
-        {
-            diskann::cout << "No label found";
-            exit(-1);
-        }
-        std::sort(lbls.begin(), lbls.end());
-        _pts_to_labels[line_cnt] = lbls;
-        line_cnt++;
-    }
-    num_points = (size_t)line_cnt;
-    diskann::cout << "Identified " << _labels.size() << " distinct label(s)" << std::endl;
+    std::ofstream label_writer(outFileName);
+    auto header = _labelBitsetData.GetHeader();
+    label_writer.write((char*)(&header), sizeof(LabelDataHeader));
+    label_writer.write((char*)_labelBitsetData.GetLabels().data(), _labelBitsetData.GetLabels().size());
+    label_writer.write((char*)_labelBitsetData.GetBitsets()._buf.data(), _labelBitsetData.GetBitsets()._buf.size());
+    label_writer.close();
 }
 
-template <typename T, typename TagT, typename LabelT>
-void Index<T, TagT, LabelT>::convert_pts_label_to_bitmask(std::vector<std::vector<LabelT>>& pts_to_labels, simple_bitmask_buf& bitmask_buf, size_t num_labels)
-{
-    _bitmask_buf._bitmask_size = simple_bitmask::get_bitmask_size(num_labels);
-    _bitmask_buf._buf.resize(pts_to_labels.size() * _bitmask_buf._bitmask_size, 0);
-
-    for (size_t i = 0; i < pts_to_labels.size(); i++)
-    {
-        for (size_t j = 0; j < pts_to_labels[i].size(); j++)
-        {
-            simple_bitmask bm(_bitmask_buf.get_bitmask(i), _bitmask_buf._bitmask_size);
-            bm.set(pts_to_labels[i][j]);
-        }
-    }
-}
-
-template <typename T, typename TagT, typename LabelT>
-void Index<T, TagT, LabelT>::parse_label_file_in_bitset(const std::string& label_file, size_t& num_points, size_t num_labels)
-{
-    std::ifstream infile(label_file);
-    if (infile.fail())
-    {
-        throw diskann::ANNException(std::string("Failed to open file ") + label_file, -1);
-    }
-
-    std::string line, token;
-    unsigned line_cnt = 0;
-
-    while (std::getline(infile, line))
-    {
-        line_cnt++;
-    }
-
-    _bitmask_buf._bitmask_size = simple_bitmask::get_bitmask_size(num_labels);
-    _bitmask_buf._buf.resize(line_cnt * _bitmask_buf._bitmask_size, 0);
-    
-    infile.clear();
-    infile.seekg(0, std::ios::beg);
-    line_cnt = 0;
-
-    while (std::getline(infile, line))
-    {
-        std::istringstream iss(line);
-        std::vector<LabelT> lbls(0);
-        getline(iss, token, '\t');
-        std::istringstream new_iss(token);
-        while (getline(new_iss, token, ','))
-        {
-            token.erase(std::remove(token.begin(), token.end(), '\n'), token.end());
-            token.erase(std::remove(token.begin(), token.end(), '\r'), token.end());
-            LabelT token_as_num = std::stoul(token);
-            simple_bitmask bm(_bitmask_buf.get_bitmask(line_cnt), _bitmask_buf._bitmask_size);
-            bm.set(token_as_num);
-            _labels.insert(token_as_num);
-        }
-        line_cnt++;
-    }
-    num_points = (size_t)line_cnt;
-    diskann::cout << "Identified " << _labels.size() << " distinct label(s)" << std::endl;
-}
+//template <typename T, typename TagT, typename LabelT>
+//void Index<T, TagT, LabelT>::parse_label_file_in_bitset(const std::string& label_file, size_t& num_points, size_t num_labels)
+//{
+//    std::ifstream infile(label_file);
+//    if (infile.fail())
+//    {
+//        throw diskann::ANNException(std::string("Failed to open file ") + label_file, -1);
+//    }
+//
+//    std::string line, token;
+//    unsigned line_cnt = 0;
+//
+//    while (std::getline(infile, line))
+//    {
+//        line_cnt++;
+//    }
+//
+//    _bitmask_buf._bitmask_size = simple_bitmask::get_bitmask_size(num_labels);
+//    _bitmask_buf._buf.resize(line_cnt * _bitmask_buf._bitmask_size, 0);
+//    
+//    infile.clear();
+//    infile.seekg(0, std::ios::beg);
+//    line_cnt = 0;
+//
+//    while (std::getline(infile, line))
+//    {
+//        std::istringstream iss(line);
+//        std::vector<LabelT> lbls(0);
+//        getline(iss, token, '\t');
+//        std::istringstream new_iss(token);
+//        while (getline(new_iss, token, ','))
+//        {
+//            token.erase(std::remove(token.begin(), token.end(), '\n'), token.end());
+//            token.erase(std::remove(token.begin(), token.end(), '\r'), token.end());
+//            LabelT token_as_num = static_cast<LabelT>(std::stoul(token));
+//            simple_bitmask bm(_bitmask_buf.get_bitmask(line_cnt), _bitmask_buf._bitmask_size);
+//            bm.set(token_as_num);
+//            _labels.insert(token_as_num);
+//        }
+//        line_cnt++;
+//    }
+//    num_points = (size_t)line_cnt;
+//    diskann::cout << "Identified " << _labels.size() << " distinct label(s)" << std::endl;
+//}
 
 template <typename T, typename TagT, typename LabelT>
 void Index<T, TagT, LabelT>::set_universal_label(const LabelT &label)
@@ -2148,28 +2174,34 @@ void Index<T, TagT, LabelT>::build_filtered_index(const char *filename, const st
     _labels_file = label_file; // original label file
     _filtered_index = true;
     _label_to_medoid_id.clear();
-    size_t num_points_labels = 0;
+//    size_t num_points_labels = 0;
 
-    parse_label_file(label_file,
-                     num_points_labels); // determines medoid for each label and identifies
+//    parse_label_file(label_file,
+ //                    num_points_labels); // determines medoid for each label and identifies
                                          // the points to label mapping
 
-    convert_pts_label_to_bitmask(_pts_to_labels, _bitmask_buf, _labels.size());
+    _labelData.Load(label_file);
 
-    std::unordered_map<LabelT, std::vector<_u32>> label_to_points;
+//    convert_pts_label_to_bitmask(_pts_to_labels, _bitmask_buf, _labels.size());
+    _labelBitsetData.LoadFromLabelData(_labelData);
+
+    std::unordered_map<LabelT, std::vector<uint32_t>> label_to_points;
     std::vector<std::uint64_t> label_bitmask;
-    for (int lbl = 0; lbl < _labels.size(); lbl++)
+    
+    auto labelCount = _labelData.GetLabelCount();
+    for (uint16_t lbl = 0; lbl < labelCount; lbl++)
     {
-        auto itr = _labels.begin();
-        std::advance(itr, lbl);
-        auto &x = *itr;
-        
+        //auto itr = _labels.begin();
+        //std::advance(itr, lbl);
+        //auto &x = *itr;
+        auto label = _labelData.GetLabel(lbl);
+
         label_bitmask.clear();
-        label_bitmask.resize(_bitmask_buf._bitmask_size, 0);
+        label_bitmask.resize(_labelBitsetData.GetBitsets()._bitmask_size, 0);
 
         simple_bitmask_full_val bitmask_full_val;
         bitmask_full_val._mask = label_bitmask.data();
-        auto bitmask_val = simple_bitmask::get_bitmask_val(x);
+        auto bitmask_val = simple_bitmask::get_bitmask_val(label);
         bitmask_full_val.merge_bitmask_val(bitmask_val);
         if (_use_universal_label)
         {
@@ -2177,10 +2209,10 @@ void Index<T, TagT, LabelT>::build_filtered_index(const char *filename, const st
             bitmask_full_val.merge_bitmask_val(bitmask_val);
         }
 
-        std::vector<_u32> labeled_points;
-        for (_u32 point_id = 0; point_id < num_points_to_load; point_id++)
+        std::vector<uint32_t> labeled_points;
+        for (uint32_t point_id = 0; point_id < num_points_to_load; point_id++)
         {
-            simple_bitmask bm(_bitmask_buf.get_bitmask(point_id), _bitmask_buf._bitmask_size);
+            simple_bitmask bm(_labelBitsetData.GetBitsets().get_bitmask(point_id), _labelBitsetData.GetBitsets()._bitmask_size);
             bool pt_has_lbl = bm.test_full_mask_val(bitmask_full_val);
 
             if (pt_has_lbl)
@@ -2188,15 +2220,17 @@ void Index<T, TagT, LabelT>::build_filtered_index(const char *filename, const st
                 labeled_points.emplace_back(point_id);
             }
         }
+        label_to_points[label] = labeled_points;
     }
 
+    
     uint32_t num_cands = 25;
-    for (auto itr = _labels.begin(); itr != _labels.end(); itr++)
+    for (uint16_t lbl = 0; lbl < labelCount; lbl++)
     {
         uint32_t best_medoid_count = std::numeric_limits<uint32_t>::max();
-        auto &curr_label = *itr;
+        auto label = _labelData.GetLabel(lbl);
         uint32_t best_medoid;
-        auto labeled_points = label_to_points[curr_label];
+        auto labeled_points = label_to_points[label];
         for (uint32_t cnd = 0; cnd < num_cands; cnd++)
         {
             uint32_t cur_cnd = labeled_points[rand() % labeled_points.size()];
@@ -2216,7 +2250,7 @@ void Index<T, TagT, LabelT>::build_filtered_index(const char *filename, const st
                 best_medoid = cur_cnd;
             }
         }
-        _label_to_medoid_id[curr_label] = best_medoid;
+        _label_to_medoid_id[label] = best_medoid;
         _medoid_counts[best_medoid]++;
     }
 

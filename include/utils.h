@@ -28,6 +28,7 @@ typedef int FileHandle;
 #include "tsl/robin_set.h"
 #include "types.h"
 #include <any>
+#include <limits>
 
 #ifdef EXEC_ENV_OLS
 #include "content_buf.h"
@@ -155,7 +156,7 @@ inline int delete_file(const std::string &fileName)
 
 inline void convert_labels_string_to_int(const std::string &inFileName, const std::string &outFileName,
                                          const std::string &mapFileName, const std::string &unv_label,
-                                        _u32& unv_label_id)
+                                         uint32_t& unv_label_id)
 {
     std::unordered_map<std::string, uint32_t> string_int_map;
     std::ofstream label_writer(outFileName);
@@ -204,6 +205,128 @@ inline void convert_labels_string_to_int(const std::string &inFileName, const st
         map_writer << mp.first << "\t" << mp.second << std::endl;
     }
     map_writer.close();
+}
+
+void convert_labels_string_to_int_binary(const std::string& inFileName, const std::string& outFileName,
+                                         const std::string& mapFileName, const std::string& unv_label,
+                                         uint32_t& unv_label_id)
+{
+    std::unordered_map<std::string, uint32_t> string_int_map;
+    std::ofstream label_writer(outFileName);
+    std::ifstream label_reader(inFileName);
+
+    std::vector<std::vector<uint32_t>> lbls;
+
+    std::string line, token;
+    uint32_t currentCount = 0;
+    while (std::getline(label_reader, line))
+    {
+        lbls.emplace_back();
+        
+        std::istringstream new_iss(line);
+        while (getline(new_iss, token, ','))
+        {
+            token.erase(std::remove(token.begin(), token.end(), '\n'), token.end());
+            token.erase(std::remove(token.begin(), token.end(), '\r'), token.end());
+            if (string_int_map.find(token) == string_int_map.end())
+            {
+                uint32_t nextId = (uint32_t)string_int_map.size() + 1;
+                string_int_map[token] = nextId;
+            }
+            lbls[currentCount].push_back(string_int_map[token]);
+        }
+        if (lbls[currentCount].size() <= 0)
+        {
+            std::cout << "No label found";
+            exit(-1);
+        }
+        currentCount++;
+    }
+    
+    uint8_t bytesForlabel = 0;
+    if (string_int_map.size() + 1 <= std::numeric_limits<uint8_t>::max())
+    {
+        bytesForlabel = 1;
+    }
+    else if (string_int_map.size() + 1 <= std::numeric_limits<uint16_t>::max())
+    {
+        bytesForlabel = 2;
+    }
+    else
+    {
+        std::cout << "Too many labels";
+        exit(-1);
+    }
+
+    uint16_t labalCount = static_cast<uint16_t>(string_int_map.size());
+    std::vector<uint8_t> labels;
+    labels.resize(labalCount * bytesForlabel, 0);
+
+    std::vector<uint32_t> offsets;
+    offsets.resize(currentCount + 1, 0);
+    
+    label_writer.write((char*)(&bytesForlabel), sizeof(uint8_t));
+    label_writer.write((char*)(&labalCount), sizeof(uint16_t));
+    label_writer.write((char*)(&currentCount), sizeof(uint32_t));
+    
+    uint32_t labelLocation = 0;
+    uint32_t offsetLocation = 0;
+    labelLocation = sizeof(uint8_t) + sizeof(uint16_t) + sizeof(uint32_t);
+    offsetLocation = labelLocation + static_cast<uint32_t>(labels.size());
+
+    label_writer.write((char*)labels.data(), labels.size());
+  
+    label_writer.write((char*)offsets.data(), sizeof(uint32_t) * offsets.size());
+    for (size_t i = 0; i < lbls.size(); i++)
+    {
+        uint32_t size = static_cast<uint32_t>(lbls[i].size()) * bytesForlabel;
+        offsets[i + 1] = offsets[i] + size;
+        for (auto& lbl : lbls[i])
+        {
+            if (bytesForlabel == 1)
+            {
+                uint8_t uint8Label = static_cast<uint8_t>(lbl);
+                label_writer.write((char*)(&uint8Label), bytesForlabel);
+            }
+            else
+            {
+                uint16_t uint16Label = static_cast<uint16_t>(lbl);
+                label_writer.write((char*)(&uint16Label), bytesForlabel);
+            }
+        }
+    }
+    label_writer.seekp(offsetLocation, std::ios::beg);
+    label_writer.write((char*)offsets.data(), sizeof(uint32_t) * offsets.size());
+    
+
+    if (unv_label != "")
+    {
+        unv_label_id = string_int_map[unv_label];
+    }
+
+    uint16_t labelIndex = 0;
+    std::ofstream map_writer(mapFileName);
+    for (auto mp : string_int_map)
+    {
+        map_writer << mp.first << "\t" << mp.second << std::endl;
+        if (bytesForlabel == 1)
+        {
+            uint8_t uint8Label = static_cast<uint8_t>(mp.second);
+            labels[labelIndex] = uint8Label;
+        }
+        else if (bytesForlabel == 2)
+        {
+            uint16_t uint16Label = static_cast<uint16_t>(mp.second);
+            memcpy(labels.data() + labelIndex * bytesForlabel, &uint16Label, bytesForlabel);
+        }
+        labelIndex++;
+    }
+    map_writer.close();
+
+    label_writer.seekp(labelLocation, std::ios::beg);
+    label_writer.write((char*)offsets.data(), labels.size());
+
+    label_writer.close();
 }
 
 #ifdef EXEC_ENV_OLS

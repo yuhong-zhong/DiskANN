@@ -39,28 +39,87 @@ inline double estimate_ram_usage(size_t size, uint32_t dim, uint32_t datasize, u
     return OVERHEAD_FACTOR * (size_of_data + size_of_graph + size_of_locks + size_of_outer_vector);
 }
 
-
-struct consolidation_report
+#pragma pack(push, 1)
+struct LabelDataHeader
 {
-    enum status_code
-    {
-        SUCCESS = 0,
-        FAIL = 1,
-        LOCK_FAIL = 2,
-        INCONSISTENT_COUNT_ERROR = 3
-    };
-    status_code _status;
-    size_t _active_points, _max_points, _empty_slots, _slots_released, _delete_set_size, _num_calls_to_process_delete;
-    double _time;
+    uint8_t _labelBytes = 0;
+    uint16_t _labelCount = 0;
+    uint32_t _ptCount = 0;
+};
+#pragma pack(pop)
 
-    consolidation_report(status_code status, size_t active_points, size_t max_points, size_t empty_slots,
-                         size_t slots_released, size_t delete_set_size, size_t num_calls_to_process_delete,
-                         double time_secs)
-        : _status(status), _active_points(active_points), _max_points(max_points), _empty_slots(empty_slots),
-          _slots_released(slots_released), _delete_set_size(delete_set_size),
-          _num_calls_to_process_delete(num_calls_to_process_delete), _time(time_secs)
+class LabelData
+{
+public:
+    LabelData()
     {
     }
+
+    void Load(const std::string& labelFilePath)
+    {
+        std::ifstream labelFile(labelFilePath, std::ios::binary);
+        labelFile.read((char*)(&_header), sizeof(LabelDataHeader));
+
+        _labels.resize(_header._labelCount * _header._labelBytes);
+        labelFile.read((char*)_labels.data(), _labels.size());
+
+        _offsets.resize(_header._ptCount + 1);
+        labelFile.read((char*)_offsets.data(), _offsets.size() * sizeof(uint32_t));
+        
+        uint32_t totalSize = _offsets.back();
+        _pts_labels.resize(totalSize);
+        labelFile.read((char*)_pts_labels.data(), totalSize);
+        
+        labelFile.close();
+    }
+
+    uint16_t GetLabelCount() const
+    {
+        return _header._labelCount;
+    }
+
+    uint16_t GetLabelBytes() const
+    {
+        return _header._labelBytes;
+    }
+
+    uint16_t GetLabel(uint16_t index) const
+    {
+        assert(index < _header._labelCount);
+        
+    }
+
+    uint32_t GetNodeCount() const
+    {
+        return _header._ptCount;
+    }
+
+    uint16_t GetNodeLabelCount(uint32_t nodeId) const
+    {
+        assert(nodeId < _header._ptCount);
+
+        auto size = _offsets[nodeId + 1] - _offsets[nodeId];
+        
+        assert(size % _header._labelBytes == 0);
+        
+        return static_cast<uint16_t>(size) / _header._labelBytes;
+    }
+
+    uint16_t GetNodeLabel(uint32_t nodeId, uint16_t index) const
+    {
+        auto start = _offsets[nodeId] + _header._labelBytes * index;
+        
+        uint16_t label = 0;
+        memcpy(&label, _labels.data() + start, _header._labelBytes);
+
+        return label;
+    }
+
+private:
+    LabelDataHeader _header;
+    std::vector<uint8_t> _labels;
+    std::vector<uint32_t> _offsets;
+    std::vector<uint8_t> _pts_labels;
 };
 
 struct simple_bitmask_val
@@ -174,6 +233,84 @@ private:
     std::uint64_t _bitmask_size;
 };
 
+class LabelBitsetData
+{
+public:
+    LabelBitsetData()
+    {
+    }
+
+    void Load(const std::string& labelFilePath)
+    {
+        std::ifstream labelFile(labelFilePath, std::ios::binary);
+        labelFile.read((char*)(&_header), sizeof(LabelDataHeader));
+        _labels.resize(_header._labelCount * _header._labelBytes);
+        labelFile.read((char*)_labels.data(), _labels.size());
+
+        _bitmask_buf._bitmask_size = simple_bitmask::get_bitmask_size(_header._labelCount);
+        
+        uint64_t bitmaskTotalSize = _header._ptCount * _bitmask_buf._bitmask_size;
+        _bitmask_buf._buf.resize(bitmaskTotalSize, 0);
+        labelFile.read((char*)_bitmask_buf._buf.data(), bitmaskTotalSize * sizeof(uint64_t));
+    }
+
+    void LoadFromLabelData(const LabelData& labelData)
+    {
+        auto num_labels = labelData.GetLabelCount();
+        auto num_pts = labelData.GetNodeCount();
+
+        _bitmask_buf._bitmask_size = simple_bitmask::get_bitmask_size(num_labels);
+        _bitmask_buf._buf.resize(num_pts * _bitmask_buf._bitmask_size, 0);
+    
+        for (uint32_t i = 0; i < num_pts; i++)
+        {
+            simple_bitmask bm(_bitmask_buf.get_bitmask(i), _bitmask_buf._bitmask_size);
+            auto labelsInNode = labelData.GetNodeLabelCount(i);
+            for (uint16_t j = 0; j < labelsInNode; j++)
+            {
+                auto label = labelData.GetNodeLabel(i, j);
+                bm.set(label);
+            }
+        }
+
+        _header._labelBytes = static_cast<uint8_t>(labelData.GetLabelBytes());
+        _header._labelCount = num_labels;
+        _header._ptCount = num_pts;
+        _labels.resize(_header._labelCount);
+
+        for (uint32_t i = 0; i < num_labels; i++)
+        {
+            auto label = labelData.GetLabel(i);
+            memcpy(_labels.data() + i * _header._labelBytes, &label, _header._labelBytes);
+        }
+    }
+
+    LabelDataHeader GetHeader() const
+    {
+        return _header;
+    }
+
+    const std::vector<uint8_t>& GetLabels() const
+    {
+        return _labels;
+    }
+
+    const simple_bitmask_buf& GetBitsets() const
+    {
+        return _bitmask_buf;
+    }
+
+    simple_bitmask_buf& GetBitsets()
+    {
+        return _bitmask_buf;
+    }
+
+private:
+    LabelDataHeader _header;
+    std::vector<uint8_t> _labels;
+    simple_bitmask_buf _bitmask_buf;
+};
+
 template <typename T, typename TagT = uint32_t, typename LabelT = uint32_t> class Index : public AbstractIndex
 {
     /**************************************************************************
@@ -222,8 +359,8 @@ template <typename T, typename TagT = uint32_t, typename LabelT = uint32_t> clas
     DISKANN_DLLEXPORT size_t get_num_points();
     DISKANN_DLLEXPORT size_t get_max_points();
 
-    DISKANN_DLLEXPORT bool detect_common_filters(uint32_t point_id, bool search_invocation,
-                                                 const std::vector<LabelT> &incoming_labels);
+    //DISKANN_DLLEXPORT bool detect_common_filters(uint32_t point_id, bool search_invocation,
+    //                                             const std::vector<LabelT> &incoming_labels);
 
     // Batch build from a file. Optionally pass tags vector.
     DISKANN_DLLEXPORT void build(const char *filename, const size_t num_points_to_load,
@@ -377,11 +514,13 @@ template <typename T, typename TagT = uint32_t, typename LabelT = uint32_t> clas
     // determines navigating node of the graph by calculating medoid of datafopt
     uint32_t calculate_entry_point();
 
-    void parse_label_file(const std::string &label_file, size_t &num_pts_labels);
+//    void parse_label_file(const std::string &label_file, size_t &num_pts_labels);
 
-    void parse_label_file_in_bitset(const std::string& label_file, size_t& num_points, size_t num_labels);
+//    void parse_label_file_in_bitset(const std::string& label_file, size_t& num_points, size_t num_labels);
 
-    void convert_pts_label_to_bitmask(std::vector<std::vector<LabelT>>& pts_to_labels, simple_bitmask_buf& bitmask_buf, size_t num_labels);
+//    void convert_pts_label_to_bitmask(std::vector<std::vector<LabelT>>& pts_to_labels, simple_bitmask_buf& bitmask_buf, size_t num_labels);
+
+    void write_int_bitset_binary(const std::string& outFileName);
 
     std::unordered_map<std::string, LabelT> load_label_map(const std::string &map_file);
 
@@ -512,8 +651,11 @@ template <typename T, typename TagT = uint32_t, typename LabelT = uint32_t> clas
     // Filter Support
 
     bool _filtered_index = false;
-    std::vector<std::vector<LabelT>> _pts_to_labels;
-    tsl::robin_set<LabelT> _labels;
+//    std::vector<std::vector<LabelT>> _pts_to_labels;
+    LabelData _labelData;
+    LabelBitsetData _labelBitsetData;
+
+//    tsl::robin_set<LabelT> _labels;
     std::string _labels_file;
     std::unordered_map<LabelT, uint32_t> _label_to_medoid_id;
     std::unordered_map<uint32_t, uint32_t> _medoid_counts;
@@ -572,7 +714,7 @@ template <typename T, typename TagT = uint32_t, typename LabelT = uint32_t> clas
     // Per node lock, cardinality=_max_points
     std::vector<non_recursive_mutex> _locks;
 
-    simple_bitmask_buf _bitmask_buf;
+//    simple_bitmask_buf _bitmask_buf;
 
     static const float INDEX_GROWTH_FACTOR;
 };
