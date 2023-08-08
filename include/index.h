@@ -86,7 +86,9 @@ public:
     uint16_t GetLabel(uint16_t index) const
     {
         assert(index < _header._labelCount);
-        
+        uint16_t label = 0;
+        memcpy(&label, _labels.data() + _header._labelBytes * index, _header._labelBytes);
+        return label;
     }
 
     uint32_t GetNodeCount() const

@@ -207,9 +207,9 @@ inline void convert_labels_string_to_int(const std::string &inFileName, const st
     map_writer.close();
 }
 
-void convert_labels_string_to_int_binary(const std::string& inFileName, const std::string& outFileName,
-                                         const std::string& mapFileName, const std::string& unv_label,
-                                         uint32_t& unv_label_id)
+inline void convert_labels_string_to_int_binary(const std::string& inFileName, const std::string& outFileName,
+    const std::string& mapFileName, const std::string& unv_label,
+    uint32_t& unv_label_id)
 {
     std::unordered_map<std::string, uint32_t> string_int_map;
     std::ofstream label_writer(outFileName);
@@ -222,7 +222,7 @@ void convert_labels_string_to_int_binary(const std::string& inFileName, const st
     while (std::getline(label_reader, line))
     {
         lbls.emplace_back();
-        
+
         std::istringstream new_iss(line);
         while (getline(new_iss, token, ','))
         {
@@ -242,7 +242,7 @@ void convert_labels_string_to_int_binary(const std::string& inFileName, const st
         }
         currentCount++;
     }
-    
+
     uint8_t bytesForlabel = 0;
     if (string_int_map.size() + 1 <= std::numeric_limits<uint8_t>::max())
     {
@@ -264,18 +264,18 @@ void convert_labels_string_to_int_binary(const std::string& inFileName, const st
 
     std::vector<uint32_t> offsets;
     offsets.resize(currentCount + 1, 0);
-    
+
     label_writer.write((char*)(&bytesForlabel), sizeof(uint8_t));
     label_writer.write((char*)(&labalCount), sizeof(uint16_t));
     label_writer.write((char*)(&currentCount), sizeof(uint32_t));
-    
+
     uint32_t labelLocation = 0;
     uint32_t offsetLocation = 0;
     labelLocation = sizeof(uint8_t) + sizeof(uint16_t) + sizeof(uint32_t);
     offsetLocation = labelLocation + static_cast<uint32_t>(labels.size());
 
     label_writer.write((char*)labels.data(), labels.size());
-  
+
     label_writer.write((char*)offsets.data(), sizeof(uint32_t) * offsets.size());
     for (size_t i = 0; i < lbls.size(); i++)
     {
@@ -297,7 +297,7 @@ void convert_labels_string_to_int_binary(const std::string& inFileName, const st
     }
     label_writer.seekp(offsetLocation, std::ios::beg);
     label_writer.write((char*)offsets.data(), sizeof(uint32_t) * offsets.size());
-    
+
 
     if (unv_label != "")
     {
