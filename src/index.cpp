@@ -1981,8 +1981,11 @@ void Index<T, TagT, LabelT>::build(const std::string &data_file, const size_t nu
     {
         // TODO: this should ideally happen in save()
         uint32_t unv_label_as_num = 0;
-        convert_labels_string_to_int(build_params.label_file, labels_file_to_use, mem_labels_int_map_file,
+        //convert_labels_string_to_int(build_params.label_file, labels_file_to_use, mem_labels_int_map_file,
+        //                             build_params.universal_label, unv_label_as_num);
+        convert_labels_string_to_int_binary(build_params.label_file, labels_file_to_use, mem_labels_int_map_file,
                                      build_params.universal_label, unv_label_as_num);
+
         if (build_params.universal_label != "")
         {
             this->set_universal_label(static_cast<LabelT>(unv_label_as_num));
