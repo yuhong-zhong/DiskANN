@@ -261,7 +261,7 @@ inline void convert_labels_string_to_int_binary(const std::string& inFileName, c
     uint16_t labalCount = static_cast<uint16_t>(string_int_map.size());
     std::vector<uint8_t> labels;
     labels.resize(labalCount * bytesForlabel, 0);
-
+    
     std::vector<uint32_t> offsets;
     offsets.resize(currentCount + 1, 0);
 
@@ -324,7 +324,7 @@ inline void convert_labels_string_to_int_binary(const std::string& inFileName, c
     map_writer.close();
 
     label_writer.seekp(labelLocation, std::ios::beg);
-    label_writer.write((char*)offsets.data(), labels.size());
+    label_writer.write((char*)labels.data(), labels.size());
 
     label_writer.close();
 }
