@@ -3,6 +3,7 @@
 
 #include "common_includes.h"
 #include <boost/program_options.hpp>
+#include <numeric>
 
 #include "index.h"
 #include "disk_utils.h"
@@ -121,7 +122,13 @@ int search_disk_index(diskann::Metric &metric, const std::string &index_path_pre
 
     std::vector<uint32_t> node_list;
     diskann::cout << "Caching " << num_nodes_to_cache << " nodes around medoid(s)" << std::endl;
-    _pFlashIndex->cache_bfs_levels(num_nodes_to_cache, node_list);
+    if (num_nodes_to_cache == _pFlashIndex->get_num_points()) {
+        diskann::cout << "Caching all nodes" << std::endl;
+        node_list.resize(num_nodes_to_cache);
+        std::iota(node_list.begin(), node_list.end(), 0);
+    } else {
+        _pFlashIndex->cache_bfs_levels(num_nodes_to_cache, node_list);
+    }
     // if (num_nodes_to_cache > 0)
     //     _pFlashIndex->generate_cache_list_from_sample_queries(warmup_query_file, 15, 6, num_nodes_to_cache,
     //     num_threads, node_list);
@@ -226,7 +233,9 @@ int search_disk_index(diskann::Metric &metric, const std::string &index_path_pre
 
 #pragma omp parallel for schedule(dynamic, 1)
         for (int64_t i = 0; i < (int64_t)query_num; i++)
+        // for (int64_t j = 0; j < 1000000000000; ++j)
         {
+            // int64_t i = j % query_num;
             if (!filtered_search)
             {
                 _pFlashIndex->cached_beam_search(query + (i * query_aligned_dim), recall_at, L,

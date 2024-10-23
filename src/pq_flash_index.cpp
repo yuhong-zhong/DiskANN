@@ -218,8 +218,10 @@ template <typename T, typename LabelT> void PQFlashIndex<T, LabelT>::load_cache_
     diskann::alloc_aligned((void **)&_coord_cache_buf, coord_cache_buf_len * sizeof(T), 8 * sizeof(T));
     memset(_coord_cache_buf, 0, coord_cache_buf_len * sizeof(T));
 
-    size_t BLOCK_SIZE = 8;
+    size_t BLOCK_SIZE = 64;
     size_t num_blocks = DIV_ROUND_UP(num_cached_nodes, BLOCK_SIZE);
+
+#pragma omp parallel for schedule(dynamic, 1)
     for (size_t block = 0; block < num_blocks; block++)
     {
         size_t start_idx = block * BLOCK_SIZE;
@@ -240,12 +242,15 @@ template <typename T, typename LabelT> void PQFlashIndex<T, LabelT>::load_cache_
         auto read_status = read_nodes(nodes_to_read, coord_buffers, nbr_buffers);
 
         // check for success and insert into the cache.
-        for (size_t i = 0; i < read_status.size(); i++)
+#pragma omp critical
         {
-            if (read_status[i] == true)
+            for (size_t i = 0; i < read_status.size(); i++)
             {
-                _coord_cache.insert(std::make_pair(nodes_to_read[i], coord_buffers[i]));
-                _nhood_cache.insert(std::make_pair(nodes_to_read[i], nbr_buffers[i]));
+                if (read_status[i] == true)
+                {
+                        _coord_cache.insert(std::make_pair(nodes_to_read[i], coord_buffers[i]));
+                        _nhood_cache.insert(std::make_pair(nodes_to_read[i], nbr_buffers[i]));
+                }
             }
         }
     }
