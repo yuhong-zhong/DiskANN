@@ -7,6 +7,7 @@
 #include <system_error>
 #include <cstdint>
 #include "windows_customizations.h"
+#include <cstdint>
 
 #ifndef _WINDOWS
 #define __FUNCSIG__ __PRETTY_FUNCTION__

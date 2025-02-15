@@ -8,6 +8,7 @@
 #include "pq_scratch.h"
 #include "pq_flash_index.h"
 #include "cosine_similarity.h"
+#include <fstream>
 
 #ifdef _WINDOWS
 #include "windows_aligned_file_reader.h"
@@ -1406,9 +1407,14 @@ void PQFlashIndex<T, LabelT>::cached_beam_search(const T *query1, const uint64_t
         }
     }
 
+    std::ofstream outfile;
+    outfile.open("_diskann_trace.txt", std::ios_base::app);
+
     compute_dists(&best_medoid, 1, dist_scratch);
     retset.insert(Neighbor(best_medoid, dist_scratch[0]));
     visited.insert(best_medoid);
+
+    outfile << best_medoid << "," << dist_scratch[0] << " ";
 
     uint32_t cmps = 0;
     uint32_t hops = 0;
@@ -1540,6 +1546,8 @@ void PQFlashIndex<T, LabelT>::cached_beam_search(const T *query1, const uint64_t
                     float dist = dist_scratch[m];
                     Neighbor nn(id, dist);
                     retset.insert(nn);
+
+                    outfile << id << "," << dist << " ";
                 }
             }
         }
@@ -1608,6 +1616,8 @@ void PQFlashIndex<T, LabelT>::cached_beam_search(const T *query1, const uint64_t
 
                     Neighbor nn(id, dist);
                     retset.insert(nn);
+
+                    outfile << id << "," << dist << " ";
                 }
             }
 

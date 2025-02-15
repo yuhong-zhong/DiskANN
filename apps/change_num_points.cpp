@@ -10,6 +10,7 @@
 #include <sys/ioctl.h>
 #include <sys/syscall.h>
 #include <sys/stat.h>
+#include <cstdint>
 
 #define BUG_ON(cond) \
     do { \
