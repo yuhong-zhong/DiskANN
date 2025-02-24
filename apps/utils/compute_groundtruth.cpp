@@ -421,7 +421,7 @@ std::vector<std::vector<std::pair<uint32_t, float>>> processUnfilteredParts(cons
 
 template <typename T>
 int aux_main(const std::string &base_file, const std::string &query_file, const std::string &gt_file, size_t k,
-             const diskann::Metric &metric, const std::string &tags_file = std::string(""), uint64_t start_offset, uint64_t end_offset)
+             const diskann::Metric &metric, const std::string &tags_file = std::string(""), uint64_t start_offset = 0, uint64_t end_offset = 0)
 {
     size_t npoints, nqueries, dim;
 
