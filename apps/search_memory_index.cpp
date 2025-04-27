@@ -4,6 +4,7 @@
 #include <cstring>
 #include <iomanip>
 #include <algorithm>
+#include <map>
 #include <numeric>
 #include <omp.h>
 #include <set>
@@ -159,6 +160,7 @@ int search_memory_index(diskann::Metric &metric, const std::string &index_path, 
 
         auto s = std::chrono::high_resolution_clock::now();
         omp_set_num_threads(num_threads);
+        std::map<int64_t, int64_t> occurrences_map;
 #pragma omp parallel for schedule(dynamic, 1)
         for (int64_t i = 0; i < (int64_t)query_num; i++)
         {
@@ -169,27 +171,27 @@ int search_memory_index(diskann::Metric &metric, const std::string &index_path, 
 
                 auto retval = index->search_with_filters(query + i * query_aligned_dim, raw_filter, recall_at, L,
                                                          query_result_ids[test_id].data() + i * recall_at,
-                                                         query_result_dists[test_id].data() + i * recall_at);
+                                                         query_result_dists[test_id].data() + i * recall_at, occurrences_map);
                 cmp_stats[i] = retval.second;
             }
             else if (metric == diskann::FAST_L2)
             {
                 index->search_with_optimized_layout(query + i * query_aligned_dim, recall_at, L,
-                                                    query_result_ids[test_id].data() + i * recall_at);
+                                                    query_result_ids[test_id].data() + i * recall_at, occurrences_map);
             }
             else if (tags)
             {
                 if (!filtered_search)
                 {
                     index->search_with_tags(query + i * query_aligned_dim, recall_at, L,
-                                            query_result_tags.data() + i * recall_at, nullptr, res);
+                                            query_result_tags.data() + i * recall_at, nullptr, res, occurrences_map);
                 }
                 else
                 {
                     std::string raw_filter = query_filters.size() == 1 ? query_filters[0] : query_filters[i];
 
                     index->search_with_tags(query + i * query_aligned_dim, recall_at, L,
-                                            query_result_tags.data() + i * recall_at, nullptr, res, true, raw_filter);
+                                            query_result_tags.data() + i * recall_at, nullptr, res, occurrences_map, true, raw_filter);
                 }
 
                 for (int64_t r = 0; r < (int64_t)recall_at; r++)

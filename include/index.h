@@ -126,7 +126,7 @@ template <typename T, typename TagT = uint32_t, typename LabelT = uint32_t> clas
     DISKANN_DLLEXPORT void optimize_index_layout();
 
     // For FastL2 search on optimized layout
-    DISKANN_DLLEXPORT void search_with_optimized_layout(const T *query, size_t K, size_t L, uint32_t *indices);
+    DISKANN_DLLEXPORT void search_with_optimized_layout(const T *query, size_t K, size_t L, uint32_t *indices, std::map<int64_t, int64_t>& occurrences);
 
     // Added search overload that takes L as parameter, so that we
     // can customize L on a per-query basis without tampering with "Parameters"
@@ -136,14 +136,14 @@ template <typename T, typename TagT = uint32_t, typename LabelT = uint32_t> clas
 
     // Initialize space for res_vectors before calling.
     DISKANN_DLLEXPORT size_t search_with_tags(const T *query, const uint64_t K, const uint32_t L, TagT *tags,
-                                              float *distances, std::vector<T *> &res_vectors, bool use_filters = false,
+                                              float *distances, std::vector<T *> &res_vectors, std::map<int64_t, int64_t>& occurrences, bool use_filters = false,
                                               const std::string filter_label = "");
 
     // Filter support search
     template <typename IndexType>
     DISKANN_DLLEXPORT std::pair<uint32_t, uint32_t> search_with_filters(const T *query, const LabelT &filter_label,
                                                                         const size_t K, const uint32_t L,
-                                                                        IndexType *indices, float *distances);
+                                                                        IndexType *indices, float *distances, std::map<int64_t, int64_t>& occurrences);
 
     // Will fail if tag already in the index or if tag=0.
     DISKANN_DLLEXPORT int insert_point(const T *point, const TagT tag);
@@ -209,8 +209,7 @@ template <typename T, typename TagT = uint32_t, typename LabelT = uint32_t> clas
     virtual std::pair<uint32_t, uint32_t> _search_with_filters(const DataType &query,
                                                                const std::string &filter_label_raw, const size_t K,
                                                                const uint32_t L, std::any &indices,
-                                                               float *distances) override;
-
+                                                               float *distances, std::map<int64_t, int64_t>& occurrences) override;
     virtual int _insert_point(const DataType &data_point, const TagType tag) override;
     virtual int _insert_point(const DataType &data_point, const TagType tag, Labelvector &labels) override;
 
@@ -224,10 +223,10 @@ template <typename T, typename TagT = uint32_t, typename LabelT = uint32_t> clas
 
     virtual int _get_vector_by_tag(TagType &tag, DataType &vec) override;
 
-    virtual void _search_with_optimized_layout(const DataType &query, size_t K, size_t L, uint32_t *indices) override;
+    virtual void _search_with_optimized_layout(const DataType &query, size_t K, size_t L, uint32_t *indices, std::map<int64_t, int64_t>& occurrences) override;
 
     virtual size_t _search_with_tags(const DataType &query, const uint64_t K, const uint32_t L, const TagType &tags,
-                                     float *distances, DataVector &res_vectors, bool use_filters = false,
+                                     float *distances, DataVector &res_vectors, std::map<int64_t, int64_t>& occurrences, bool use_filters = false,
                                      const std::string filter_label = "") override;
 
     virtual void _set_universal_label(const LabelType universal_label) override;

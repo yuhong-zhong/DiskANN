@@ -1,4 +1,5 @@
 #pragma once
+#include <map>
 #include "distance.h"
 #include "parameters.h"
 #include "utils.h"
@@ -57,12 +58,12 @@ class AbstractIndex
 
     // For FastL2 search on optimized layout
     template <typename data_type>
-    void search_with_optimized_layout(const data_type *query, size_t K, size_t L, uint32_t *indices);
+    void search_with_optimized_layout(const data_type *query, size_t K, size_t L, uint32_t *indices, std::map<int64_t, int64_t>& occurrences);
 
     // Initialize space for res_vectors before calling.
     template <typename data_type, typename tag_type>
     size_t search_with_tags(const data_type *query, const uint64_t K, const uint32_t L, tag_type *tags,
-                            float *distances, std::vector<data_type *> &res_vectors, bool use_filters = false,
+                            float *distances, std::vector<data_type *> &res_vectors, std::map<int64_t, int64_t>& occurrences, bool use_filters = false,
                             const std::string filter_label = "");
 
     // Added search overload that takes L as parameter, so that we
@@ -77,7 +78,7 @@ class AbstractIndex
     template <typename IndexType>
     std::pair<uint32_t, uint32_t> search_with_filters(const DataType &query, const std::string &raw_label,
                                                       const size_t K, const uint32_t L, IndexType *indices,
-                                                      float *distances);
+                                                      float *distances, std::map<int64_t, int64_t>& occurrences);
 
     // insert points with labels, labels should be present for filtered index
     template <typename data_type, typename tag_type, typename label_type>
@@ -112,7 +113,7 @@ class AbstractIndex
                                                   std::any &indices, float *distances = nullptr) = 0;
     virtual std::pair<uint32_t, uint32_t> _search_with_filters(const DataType &query, const std::string &filter_label,
                                                                const size_t K, const uint32_t L, std::any &indices,
-                                                               float *distances) = 0;
+                                                               float *distances, std::map<int64_t, int64_t>& occurrences) = 0;
     virtual int _insert_point(const DataType &data_point, const TagType tag, Labelvector &labels) = 0;
     virtual int _insert_point(const DataType &data_point, const TagType tag) = 0;
     virtual int _lazy_delete(const TagType &tag) = 0;
@@ -121,9 +122,9 @@ class AbstractIndex
     virtual void _set_start_points_at_random(DataType radius, uint32_t random_seed = 0) = 0;
     virtual int _get_vector_by_tag(TagType &tag, DataType &vec) = 0;
     virtual size_t _search_with_tags(const DataType &query, const uint64_t K, const uint32_t L, const TagType &tags,
-                                     float *distances, DataVector &res_vectors, bool use_filters = false,
+                                     float *distances, DataVector &res_vectors, std::map<int64_t, int64_t>& occurrences, bool use_filters = false,
                                      const std::string filter_label = "") = 0;
-    virtual void _search_with_optimized_layout(const DataType &query, size_t K, size_t L, uint32_t *indices) = 0;
+    virtual void _search_with_optimized_layout(const DataType &query, size_t K, size_t L, uint32_t *indices, std::map<int64_t, int64_t>& occurrences) = 0;
     virtual void _set_universal_label(const LabelType universal_label) = 0;
 };
 } // namespace diskann
