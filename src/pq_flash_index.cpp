@@ -1368,6 +1368,9 @@ void PQFlashIndex<T, LabelT>::cached_beam_search(const T *query1, const uint64_t
     retset.reserve(l_search);
     std::vector<Neighbor> &full_retset = query_scratch->full_retset;
 
+    // Add hop count tracking
+    tsl::robin_map<uint32_t, uint32_t> node_hop_counts;
+
     uint32_t best_medoid = 0;
     float best_dist = (std::numeric_limits<float>::max)();
     if (!use_filter)
@@ -1414,7 +1417,11 @@ void PQFlashIndex<T, LabelT>::cached_beam_search(const T *query1, const uint64_t
     retset.insert(Neighbor(best_medoid, dist_scratch[0]));
     visited.insert(best_medoid);
 
-    outfile << best_medoid << "," << dist_scratch[0] << " ";
+    // Set hop count for entry point
+    node_hop_counts[best_medoid] = 0;
+
+    // Add hop count to trace output
+    outfile << best_medoid << "," << dist_scratch[0] << "," << node_hop_counts[best_medoid] << std::endl;
 
     uint32_t cmps = 0;
     uint32_t hops = 0;
@@ -1547,7 +1554,11 @@ void PQFlashIndex<T, LabelT>::cached_beam_search(const T *query1, const uint64_t
                     Neighbor nn(id, dist);
                     retset.insert(nn);
 
-                    outfile << id << "," << dist << " ";
+                    // Set hop count for this node
+                    node_hop_counts[id] = node_hop_counts[cached_nhood.first] + 1;
+
+                    // Add hop count to trace output
+                    outfile << id << "," << dist << "," << node_hop_counts[id] << std::endl;
                 }
             }
         }
@@ -1617,7 +1628,11 @@ void PQFlashIndex<T, LabelT>::cached_beam_search(const T *query1, const uint64_t
                     Neighbor nn(id, dist);
                     retset.insert(nn);
 
-                    outfile << id << "," << dist << " ";
+                    // Set hop count for this node
+                    node_hop_counts[id] = node_hop_counts[frontier_nhood.first] + 1;
+
+                    // Add hop count to trace output
+                    outfile << id << "," << dist << "," << node_hop_counts[id] << std::endl;
                 }
             }
 
