@@ -1421,7 +1421,7 @@ void PQFlashIndex<T, LabelT>::cached_beam_search(const T *query1, const uint64_t
     node_hop_counts[best_medoid] = 0;
 
     // Add hop count to trace output
-    outfile << best_medoid << "," << dist_scratch[0] << "," << node_hop_counts[best_medoid] << std::endl;
+    outfile << std::endl << best_medoid << "," << dist_scratch[0] << "," << node_hop_counts[best_medoid] << " ";
 
     uint32_t cmps = 0;
     uint32_t hops = 0;
@@ -1558,7 +1558,7 @@ void PQFlashIndex<T, LabelT>::cached_beam_search(const T *query1, const uint64_t
                     node_hop_counts[id] = node_hop_counts[cached_nhood.first] + 1;
 
                     // Add hop count to trace output
-                    outfile << id << "," << dist << "," << node_hop_counts[id] << std::endl;
+                    outfile << id << "," << dist << "," << node_hop_counts[id] << " ";
                 }
             }
         }
@@ -1632,7 +1632,7 @@ void PQFlashIndex<T, LabelT>::cached_beam_search(const T *query1, const uint64_t
                     node_hop_counts[id] = node_hop_counts[frontier_nhood.first] + 1;
 
                     // Add hop count to trace output
-                    outfile << id << "," << dist << "," << node_hop_counts[id] << std::endl;
+                    outfile << id << "," << dist << "," << node_hop_counts[id] << " ";
                 }
             }
 
