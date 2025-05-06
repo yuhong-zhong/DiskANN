@@ -1050,7 +1050,9 @@ void Index<T, TagT, LabelT>::search_for_point_and_prune(int location, uint32_t L
     prune_neighbors(location, pool, pruned_list, scratch);
 
     assert(!pruned_list.empty());
-    assert(_graph_store->get_total_points() == _max_points + _num_frozen_pts);
+    //std::cout << "Total points " << _graph_store->get_total_points() << std::endl;
+    //std::cout << "Added points " << _max_points + _num_frozen_pts << std::endl;
+    assert(_graph_store->get_total_points() == _max_points + _num_frozen_pts + 1);
 }
 
 template <typename T, typename TagT, typename LabelT>

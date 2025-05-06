@@ -295,6 +295,12 @@ void build_incremental_index(const std::string &data_path, const uint32_t L, con
     });
     insert_task.wait();
 
+    std::string compute_groundtruth = "/mnt/sdb/DiskANN/build/apps/utils/compute_groundtruth --data_type int8 --dist_fn l2 --base_file /mnt/sdb/vectors_merged.bin --query_file /mnt/sdb/query.bin --K 100 --gt_file /mnt/sdb/gt100_learn-act-cons5000-max200000 --start_offset 0 --end_offset " + std::to_string(active_window);
+    int compute_ret = std::system(compute_groundtruth.c_str());
+
+    std::string search_memory = "/mnt/sdb/DiskANN/build/apps/search_memory_index --data_type int8 --dist_fn l2 --index_path_prefix /mnt/sdb/local_index.after-streaming-act100000-cons5000-max200000 --result_path /mnt/sdb/results/results_ --query_file /mnt/sdb/query.bin --gt_file /mnt/sdb/gt100_learn-act-cons5000-max200000 -K 10 -L 20 40 60 80 100 -T 48 --dynamic true --tags 1 > /mnt/sdb/dynamic_index/streaming_results/results-test 2>&1";
+    int search_ret = std::system(search_memory.c_str());
+
     for (size_t start = active_window; start + consolidate_interval <= max_points_to_insert;
          start += consolidate_interval)
     {
@@ -306,16 +312,18 @@ void build_incremental_index(const std::string &data_path, const uint32_t L, con
         });
         insert_task.wait();
 
-        auto lookup_task = std::async(std::launch::async, [&]() {
-            std::string compute_groundtruth = "./mnt/sdb/DiskANN/build/apps/utils/compute_groundtruth --data_type int8 --dist_fn l2 --base_file /mnt/sdb/vectors_merged.bin --query_file /mnt/sdb/query.bin --K 100 --gt_file /mnt/sdb/gt100_learn-act-cons5000-max200000 --start_offset 50000001 --end_offset 100000000";
-            int compute_ret = std::system(compute_groundtruth.c_str());
-
-            std::string search_memory = "./mnt/sdb/DiskANN/build/apps/search_memory_index  --data_type int8 --dist_fn l2 --index_path_prefix /mnt/sdb/local_index.after-streaming-act100000-cons5000-max200000 --result_path /mnt/sdb/results/results_  --query_file /mnt/sdb/query.bin --gt_file /mnt/sdb/gt100_learn-act-cons5000-max200000 -K 10 -L 20 40 60 80 100 -T 48 --dynamic true --tags 1 >> /mnt/sdb/dynamic_index/log_results/results_50000000-100000000";
-            int search_ret = std::system(search_memory.c_str());
-        });
-
         if (delete_tasks.size() > 0)
             delete_tasks[delete_tasks.size() - 1].wait();
+        
+        if (start >= active_window + (consolidate_interval * 2)) {
+            int num_deleted = active_window - consolidate_interval;
+            compute_groundtruth = "/mnt/sdb/DiskANN/build/apps/utils/compute_groundtruth --data_type int8 --dist_fn l2 --base_file /mnt/sdb/vectors_merged.bin --query_file /mnt/sdb/query.bin --K 100 --gt_file /mnt/sdb/gt100_learn-act-cons5000-max200000 --start_offset " + std::to_string(num_deleted) + " --end_offset " + std::to_string(end);
+            compute_ret = std::system(compute_groundtruth.c_str());
+    
+            search_memory = "/mnt/sdb/DiskANN/build/apps/search_memory_index --data_type int8 --dist_fn l2 --index_path_prefix /mnt/sdb/local_index.after-streaming-act100000-cons5000-max200000 --result_path /mnt/sdb/results/results_ --query_file /mnt/sdb/query.bin --gt_file /mnt/sdb/gt100_learn-act-cons5000-max200000 -K 10 -L 20 40 60 80 100 -T 48 --dynamic true --tags 1 >> /mnt/sdb/dynamic_index/streaming_results/results-test 2>&1";
+            search_ret = std::system(search_memory.c_str()); 
+        }
+        
         if (start >= active_window + consolidate_interval)
         {
             auto start_del = start - active_window - consolidate_interval;
@@ -323,6 +331,7 @@ void build_incremental_index(const std::string &data_path, const uint32_t L, con
 
             delete_tasks.emplace_back(std::async(std::launch::async, [&]() {
                 delete_and_consolidate<T, TagT, LabelT>(*index, delete_params, (size_t)start_del, (size_t)end_del);
+                
             }));
         }
     }
