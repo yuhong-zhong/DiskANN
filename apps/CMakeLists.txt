@@ -13,6 +13,12 @@ target_link_libraries(build_stitched_index ${PROJECT_NAME} ${DISKANN_TOOLS_TCMAL
 add_executable(search_memory_index search_memory_index.cpp)
 target_link_libraries(search_memory_index ${PROJECT_NAME} ${DISKANN_ASYNC_LIB} ${DISKANN_TOOLS_TCMALLOC_LINK_OPTIONS} Boost::program_options)
 
+add_executable(search_dynamic_memory_index search_dynamic_memory_index.cpp)
+target_link_libraries(search_dynamic_memory_index ${PROJECT_NAME} ${DISKANN_ASYNC_LIB} ${DISKANN_TOOLS_TCMALLOC_LINK_OPTIONS} Boost::program_options)
+
+add_executable(modify_graph modify_graph.cpp)
+target_link_libraries(modify_graph ${PROJECT_NAME} ${DISKANN_ASYNC_LIB} ${DISKANN_TOOLS_TCMALLOC_LINK_OPTIONS} Boost::program_options)
+
 add_executable(build_disk_index build_disk_index.cpp)
 target_link_libraries(build_disk_index ${PROJECT_NAME} ${DISKANN_TOOLS_TCMALLOC_LINK_OPTIONS} ${DISKANN_ASYNC_LIB} Boost::program_options)
 
@@ -37,6 +43,8 @@ if (NOT MSVC)
     install(TARGETS build_memory_index
             build_stitched_index
             search_memory_index
+            search_dynamic_memory_index
+            modify_graph
             build_disk_index
             search_disk_index
             range_search_disk_index

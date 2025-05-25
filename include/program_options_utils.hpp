@@ -33,6 +33,9 @@ const char *SEARCH_LIST_DESCRIPTION =
     "to L in the DiskANN white paper.";
 const char *INPUT_DATA_PATH = "Input data file in bin format.  This is the file you want to build the index over.  "
                               "File format:  Shape of the vector followed by the vector of embeddings as binary data.";
+const char *VECTOR_DIMENSION = "The dimension of vectors in the graph.";
+const char *POINTS_TO_DELETE = "Path to file of points to delete when modifying index index.";
+const char *POINTS_TO_ADD = "Path to file of points to add when modifying index.";
 
 // Optional parameters
 const char *FILTER_LABEL_DESCRIPTION =
