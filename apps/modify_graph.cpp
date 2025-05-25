@@ -22,10 +22,28 @@
 #include "index_factory.h"
 
 namespace po = boost::program_options;
+using TagT = uint32_t;
+
+int delete_points(diskann::AbstractIndex& index, std::vector<size_t>& points, diskann::IndexWriteParameters& delete_params) {
+    try {
+        std::cout << "Lazy deleting given points " << std::endl;
+        std::vector<size_t> points;
+        for (size_t point: points) {
+            index.lazy_delete(static_cast<TagT>(point + 1));
+        }
+
+        std::cout << "done." << std::endl;
+        auto report = index.consolidate_deletes(delete_params);
+    } catch (std::system_error &e) {
+        std::cout << "Exception caught in deletion thread: " << e.what() << std::endl;
+    }
+    
+    return 0;
+}
+
 
 template <typename T, typename LabelT = uint32_t>
-int modify_graph(diskann::Metric &metric, const std::string &index_path, const uint32_t num_threads, std::vector<uint32_t> &Lvec, const bool dynamic, const bool tags, size_t dimension, const std::string &to_delete, const std::string& to_add){
-    using TagT = uint32_t;
+int modify_graph(diskann::Metric &metric, const std::string &index_path, diskann::IndexWriteParameters &params, std::vector<uint32_t> &Lvec, const bool dynamic, const bool tags, size_t dimension, const std::string &to_delete, const std::string& to_add){
 
     const size_t num_frozen_pts = diskann::get_graph_num_frozen_points(index_path);
     auto config = diskann::IndexConfigBuilder()
@@ -48,8 +66,20 @@ int modify_graph(diskann::Metric &metric, const std::string &index_path, const u
 
     auto index_factory = diskann::IndexFactory(config);
     auto index = index_factory.create_instance();
-    index->load(index_path.c_str(), num_threads, *(std::max_element(Lvec.begin(), Lvec.end())));
+    index->load(index_path.c_str(), params.num_threads, *(std::max_element(Lvec.begin(), Lvec.end())));
     std::cout << "Index loaded" << std::endl;
+
+    std::vector<size_t> points;
+    int32_t sub_threads = (params.num_threads + 1) / 2;
+    diskann::IndexWriteParameters delete_params =
+        diskann::IndexWriteParametersBuilder(params).with_num_threads(sub_threads).build();
+    delete_points(*index, points, delete_params);
+
+    std::cout << "Successfully deleted points" << std::endl;
+    std::cout << "Successfully added points" << std::endl;
+
+    index->save(index_path.c_str());
+    std::cout << "New Index saved" << std::endl;
 
     return 0;
 }
@@ -172,17 +202,25 @@ int main(int argc, char** argv) {
         query_filters = read_file_to_vector_of_strings(query_filters_file);
     }
 
+    // TODO: Replace hardcoded alpha and lf 
+    diskann::IndexWriteParameters params = diskann::IndexWriteParametersBuilder(L, R)
+        .with_max_occlusion_size(500)
+        .with_alpha(1.2f)
+        .with_num_threads(num_threads)
+        .with_filter_list_size(0)
+        .build();
+
     if (data_type == std::string("int8"))
     {
-        modify_graph<int8_t>(metric, index_path_prefix, num_threads, Lvec, dynamic, tags, dimension, to_delete, to_add);
+        modify_graph<int8_t>(metric, index_path_prefix, params, Lvec, dynamic, tags, dimension, to_delete, to_add);
     }
     else if (data_type == std::string("uint8"))
     {
-        modify_graph<uint8_t>(metric, index_path_prefix, num_threads, Lvec, dynamic, tags, dimension, to_delete, to_add);
+        modify_graph<uint8_t>(metric, index_path_prefix, params, Lvec, dynamic, tags, dimension, to_delete, to_add);
     }
     else if (data_type == std::string("float"))
     {
-        modify_graph<float>(metric, index_path_prefix, num_threads, Lvec, dynamic, tags, dimension, to_delete, to_add);
+        modify_graph<float>(metric, index_path_prefix, params, Lvec, dynamic, tags, dimension, to_delete, to_add);
     }
     else
     {
