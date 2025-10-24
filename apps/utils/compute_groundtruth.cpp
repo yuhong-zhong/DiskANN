@@ -389,7 +389,11 @@ std::vector<std::vector<std::pair<uint32_t, float>>> processUnfilteredParts(cons
     for (int p = 0; p < num_parts; p++)
     {
         size_t start_id = p * PARTSIZE;
-        load_bin_as_float<T>(base_file.c_str(), base_data, npoints, dim, start_offset + p * PARTSIZE, (std::min)(start_offset + (p + 1) * PARTSIZE, end_offset));
+        size_t cur_start_offset = start_offset + p * PARTSIZE;
+        size_t cur_end_offset = (std::min)(start_offset + (p + 1) * PARTSIZE, npoints);
+        if (end_offset != 0)
+            cur_end_offset = (std::min)(cur_end_offset, end_offset);
+        load_bin_as_float<T>(base_file.c_str(), base_data, npoints, dim, cur_start_offset, cur_end_offset);
 
         size_t *closest_points_part = new size_t[nqueries * k];
         float *dist_closest_points_part = new float[nqueries * k];
