@@ -299,41 +299,6 @@ inline void load_bin_as_float(const char *filename, float *&data, size_t &npts, 
     std::cout << "Finished converting part data to float." << std::endl;
 }
 
-template <typename T>
-inline void load_bin_as_float(const char *filename, float *&data, size_t &npts, size_t &ndims, uint64_t start_id, uint64_t end_id)
-{
-    std::ifstream reader;
-    reader.exceptions(std::ios::failbit | std::ios::badbit);
-    reader.open(filename, std::ios::binary);
-    std::cout << "Reading bin file " << filename << " ...\n";
-    int npts_i32, ndims_i32;
-    reader.read((char *)&npts_i32, sizeof(int));
-    reader.read((char *)&ndims_i32, sizeof(int));
-    end_id = (std::min)(end_id, (uint64_t)npts_i32);
-    npts = end_id - start_id;
-    ndims = (uint64_t)ndims_i32;
-    std::cout << "#pts in part = " << npts << ", #dims = " << ndims << ", size = " << npts * ndims * sizeof(T) << "B"
-              << std::endl;
-
-    reader.seekg(start_id * ndims * sizeof(T) + 2 * sizeof(uint32_t), std::ios::beg);
-    T *data_T = new T[npts * ndims];
-    reader.read((char *)data_T, sizeof(T) * npts * ndims);
-    std::cout << "Finished reading part of the bin file." << std::endl;
-    reader.close();
-    data = aligned_malloc<float>(npts * ndims, ALIGNMENT);
-#pragma omp parallel for schedule(dynamic, 32768)
-    for (int64_t i = 0; i < (int64_t)npts; i++)
-    {
-        for (int64_t j = 0; j < (int64_t)ndims; j++)
-        {
-            float cur_val_float = (float)data_T[i * ndims + j];
-            std::memcpy((char *)(data + i * ndims + j), (char *)&cur_val_float, sizeof(float));
-        }
-    }
-    delete[] data_T;
-    std::cout << "Finished converting part data to float." << std::endl;
-}
-
 template <typename T> inline void save_bin(const std::string filename, T *data, size_t npts, size_t ndims)
 {
     std::ofstream writer;
@@ -374,26 +339,15 @@ std::vector<std::vector<std::pair<uint32_t, float>>> processUnfilteredParts(cons
                                                                             size_t &nqueries, size_t &npoints,
                                                                             size_t &dim, size_t &k, float *query_data,
                                                                             const diskann::Metric &metric,
-                                                                            std::vector<uint32_t> &location_to_tag,
-                                                                            uint64_t start_offset, uint64_t end_offset)
+                                                                            std::vector<uint32_t> &location_to_tag)
 {
     float *base_data = nullptr;
-    int num_parts;
-    if (start_offset == 0 && end_offset == 0) {
-        num_parts = get_num_parts<T>(base_file.c_str());
-    } else {
-        num_parts = (int) ((end_offset - start_offset + PARTSIZE - 1) / PARTSIZE);
-    }
-
+    int num_parts = get_num_parts<T>(base_file.c_str());
     std::vector<std::vector<std::pair<uint32_t, float>>> res(nqueries);
     for (int p = 0; p < num_parts; p++)
     {
         size_t start_id = p * PARTSIZE;
-        size_t cur_start_offset = start_offset + p * PARTSIZE;
-        size_t cur_end_offset = (std::min)(start_offset + (p + 1) * PARTSIZE, npoints);
-        if (end_offset != 0)
-            cur_end_offset = (std::min)(cur_end_offset, end_offset);
-        load_bin_as_float<T>(base_file.c_str(), base_data, npoints, dim, cur_start_offset, cur_end_offset);
+        load_bin_as_float<T>(base_file.c_str(), base_data, npoints, dim, p);
 
         size_t *closest_points_part = new size_t[nqueries * k];
         float *dist_closest_points_part = new float[nqueries * k];
@@ -425,7 +379,7 @@ std::vector<std::vector<std::pair<uint32_t, float>>> processUnfilteredParts(cons
 
 template <typename T>
 int aux_main(const std::string &base_file, const std::string &query_file, const std::string &gt_file, size_t k,
-             const diskann::Metric &metric, const std::string &tags_file = std::string(""), uint64_t start_offset = 0, uint64_t end_offset = 0)
+             const diskann::Metric &metric, const std::string &tags_file = std::string(""))
 {
     size_t npoints, nqueries, dim;
 
@@ -444,7 +398,7 @@ int aux_main(const std::string &base_file, const std::string &query_file, const 
     float *dist_closest_points = new float[nqueries * k];
 
     std::vector<std::vector<std::pair<uint32_t, float>>> results =
-        processUnfilteredParts<T>(base_file, nqueries, npoints, dim, k, query_data, metric, location_to_tag, start_offset, end_offset);
+        processUnfilteredParts<T>(base_file, nqueries, npoints, dim, k, query_data, metric, location_to_tag);
 
     for (size_t i = 0; i < nqueries; i++)
     {
@@ -537,7 +491,6 @@ int main(int argc, char **argv)
 {
     std::string data_type, dist_fn, base_file, query_file, gt_file, tags_file;
     uint64_t K;
-    uint64_t start_offset, end_offset;
 
     try
     {
@@ -562,8 +515,6 @@ int main(int argc, char **argv)
                            "Number of ground truth nearest neighbors to compute");
         desc.add_options()("tags_file", po::value<std::string>(&tags_file)->default_value(std::string()),
                            "File containing the tags in binary format");
-        desc.add_options()("start_offset", po::value<uint64_t>(&start_offset)->default_value(0), "start offset");
-        desc.add_options()("end_offset", po::value<uint64_t>(&end_offset)->default_value(0), "end offset");
 
         po::variables_map vm;
         po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -608,11 +559,11 @@ int main(int argc, char **argv)
     try
     {
         if (data_type == std::string("float"))
-            aux_main<float>(base_file, query_file, gt_file, K, metric, tags_file, start_offset, end_offset);
+            aux_main<float>(base_file, query_file, gt_file, K, metric, tags_file);
         if (data_type == std::string("int8"))
-            aux_main<int8_t>(base_file, query_file, gt_file, K, metric, tags_file, start_offset, end_offset);
+            aux_main<int8_t>(base_file, query_file, gt_file, K, metric, tags_file);
         if (data_type == std::string("uint8"))
-            aux_main<uint8_t>(base_file, query_file, gt_file, K, metric, tags_file, start_offset, end_offset);
+            aux_main<uint8_t>(base_file, query_file, gt_file, K, metric, tags_file);
     }
     catch (const std::exception &e)
     {
