@@ -28,6 +28,9 @@
 #endif
 #include "filter_utils.h"
 #include "utils.h"
+#include "half.h"
+
+using half_float::half;
 
 // WORKS FOR UPTO 2 BILLION POINTS (as we use INT INSTEAD OF UNSIGNED)
 
@@ -498,7 +501,7 @@ int main(int argc, char **argv)
 
         desc.add_options()("help,h", "Print information on arguments");
 
-        desc.add_options()("data_type", po::value<std::string>(&data_type)->required(), "data type <int8/uint8/float>");
+        desc.add_options()("data_type", po::value<std::string>(&data_type)->required(), "data type <int8/uint8/float/float16>");
         desc.add_options()("dist_fn", po::value<std::string>(&dist_fn)->required(),
                            "distance function <l2/mips/cosine>");
         desc.add_options()("base_file", po::value<std::string>(&base_file)->required(),
@@ -531,9 +534,9 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    if (data_type != std::string("float") && data_type != std::string("int8") && data_type != std::string("uint8"))
+    if (data_type != std::string("float") && data_type != std::string("int8") && data_type != std::string("uint8") && data_type != std::string("float16"))
     {
-        std::cout << "Unsupported type. float, int8 and uint8 types are supported." << std::endl;
+        std::cout << "Unsupported type. float, float16, int8 and uint8 types are supported." << std::endl;
         return -1;
     }
 
@@ -564,6 +567,8 @@ int main(int argc, char **argv)
             aux_main<int8_t>(base_file, query_file, gt_file, K, metric, tags_file);
         if (data_type == std::string("uint8"))
             aux_main<uint8_t>(base_file, query_file, gt_file, K, metric, tags_file);
+        if (data_type == std::string("float16"))
+            aux_main<half>(base_file, query_file, gt_file, K, metric, tags_file);
     }
     catch (const std::exception &e)
     {
